@@ -15,23 +15,25 @@ namespace QAGPTPJT
     {
         static void Main(string[] args)
         {
-
-
-            Console.WriteLine($"QA starts test - 20230306");
+            Console.WriteLine($"QA starts test - 20230411"); // Modify test code version from Console.WriteLine($"QA starts test - 20230306");
 
             // Initializes the control, This initialization does not allocate any gpu ressources.
             using (ViDi2.Runtime.Local.Control control = new ViDi2.Runtime.Local.Control(GpuMode.Deferred))
             {
-                control.InitializeComputeDevices(GpuMode.SingleDevicePerTool, new List<int>() { }); // Initializes all CUDA devices                
+                Console.WriteLine($"01. Preparation of configuration - Initializes all CUDA devices.");
+                control.InitializeComputeDevices(GpuMode.SingleDevicePerTool, new List<int>() { }); // Initializes all CUDA devices
+                /* Getting configuration in system e.g., GPU model, Driver Version, OS etc - It's next task*/
 
                 Console.WriteLine($"Step 1. Load RedHDM-Runtime worksapce & the directory of images.");
+                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_HDMR_S128x128.vrws"); // x64\release 사용으로 ..\ 추가됨.
+                                                                                                                                                             // TestResource's path : QAGPT_Build_22_artifacts\target_directory\TestResource
 
-                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\TestResource\\Runtime\\1_HDMR_S128x128.vrws");
                 IStream stream = workspace.Streams["default"]; // Store a reference to the stream 'default'
                 Stopwatch stopWatch = new Stopwatch();
-                var ext = new System.Collections.Generic.List<string> { ".jpg", ".bmp", ".png" }; // Load an image from file                		               
-                var myImagesFiles = Directory.GetFiles($"..\\..\\..\\..\\TestResource\\Images", "*.*", SearchOption.TopDirectoryOnly).Where(s => ext.Any(e => s.EndsWith(e)));// 기존 코드
-                //Console.WriteLine(myImagesFiles.ElementAt(0));
+                var ext = new System.Collections.Generic.List<string> { ".jpg", ".bmp", ".png" }; // Load an image from file                		                               
+                var myImagesFiles = Directory.GetFiles($"..\\..\\..\\..\\..\\TestResource\\Images", "*.*", SearchOption.TopDirectoryOnly).Where(s => ext.Any(e => s.EndsWith(e)));
+                //var myImagesFiles = Directory.GetFiles($".\\TestResource\\Images", "*.*", SearchOption.TopDirectoryOnly).Where(s => ext.Any(e => s.EndsWith(e)));// 기존 코드
+                Console.WriteLine("First Image info. : " + myImagesFiles.ElementAt(0));
 
                 ITool redTool = stream.Tools["Analyze"];
                 var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;
@@ -68,7 +70,12 @@ namespace QAGPTPJT
 
                 string csvFileName = "GetProcessingTime_ImageSize_128_test20230220-1.csv";
                 int indexcnt = 0;
-                using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\" + csvFileName, false, System.Text.Encoding.GetEncoding("utf-8")))
+                //using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\" + csvFileName, false, System.Text.Encoding.GetEncoding("utf-8")))
+                using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\..\TestResultCSV\" + csvFileName, false, System.Text.Encoding.GetEncoding("utf-8")))
+                // 참고용 경로 : H:\20230410_\QAGPT_Build_22_artifacts\target_directory\TestResource\Result\GetProcessingTime_ImageSize_128_test20230220-1.csv
+
+                //H:\20230410_\QAGPT_Build_22_artifacts\target_directory\QAGPTPJT\QAGPTPJT\TestResource\Result\GetProcessingTime_ImageSize_128_test20230220 - 1.csv
+
                 //using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"H:\_JK_Task_2023Q1\TestCode_GetProcessingTime\" + csvFileName, false, System.Text.Encoding.GetEncoding("utf-8")))
                 {
                     resultFile.WriteLine("ImagePath, SpendingTime"); // 각 필드에 사용될 제목 정의   Refer to : bjy2.tistory.com/199
