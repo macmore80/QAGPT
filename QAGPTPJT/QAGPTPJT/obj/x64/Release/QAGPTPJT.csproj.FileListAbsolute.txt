@@ -1,0 +1,2 @@
+D:\QA\QAGPT\QAGPTPJT\QAGPTPJT\obj\x64\Release\QAGPTPJT.csproj.AssemblyReference.cache
+D:\QA\QAGPT\QAGPTPJT\QAGPTPJT\obj\x64\Release\QAGPTPJT.csproj.CoreCompileInputs.cache
