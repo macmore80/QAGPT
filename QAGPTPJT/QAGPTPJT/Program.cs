@@ -36,8 +36,9 @@ namespace QAGPTPJT
                 Console.WriteLine("First Image info. : " + myImagesFiles.ElementAt(0));
 
                 ITool redTool = stream.Tools["Analyze"];
-                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;
-                hdParam.ProcessTensorRT = true;
+                //var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;
+                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IRedTool; // JK modify 20230418 becuase of using red focused super
+                //hdParam.ProcessTensorRT = true; // JK skip 20230418 becuase of using red focused super
                 // Process the image by the tool. All upstream tools are also processed                
                 List<string> stimeList = new List<string>(); // JK start : to get the spending time of each image.                
                 //Console.WriteLine($"img, processing time(ms)");
