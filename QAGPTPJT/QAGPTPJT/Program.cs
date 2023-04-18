@@ -25,7 +25,7 @@ namespace QAGPTPJT
                 /* Getting configuration in system e.g., GPU model, Driver Version, OS etc - It's next task*/
 
                 Console.WriteLine($"Step 1. Load RedHDM-Runtime worksapce & the directory of images.");
-                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_REDFSUPER_S128x128.vwsa"); // x64\release 사용으로 ..\ 추가됨.
+                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_REDFSUPER_S128x128.vrws"); // x64\release 사용으로 ..\ 추가됨.
                                                                                                                                                              // TestResource's path : QAGPT_Build_22_artifacts\target_directory\TestResource
 
                 IStream stream = workspace.Streams["default"]; // Store a reference to the stream 'default'
