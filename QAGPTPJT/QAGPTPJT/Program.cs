@@ -15,7 +15,7 @@ namespace QAGPTPJT
     {
         static void Main(string[] args)
         {
-            Console.WriteLine($"QA starts test - 20230411"); // Modify test code version from Console.WriteLine($"QA starts test - 20230306");
+            Console.WriteLine($"QA starts test - 20230418"); // Modify test code version from Console.WriteLine($"QA starts test - 20230306");
 
             // Initializes the control, This initialization does not allocate any gpu ressources.
             using (ViDi2.Runtime.Local.Control control = new ViDi2.Runtime.Local.Control(GpuMode.Deferred))
@@ -25,7 +25,7 @@ namespace QAGPTPJT
                 /* Getting configuration in system e.g., GPU model, Driver Version, OS etc - It's next task*/
 
                 Console.WriteLine($"Step 1. Load RedHDM-Runtime worksapce & the directory of images.");
-                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_HDMR_S128x128.vrws"); // x64\release 사용으로 ..\ 추가됨.
+                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_REDFSUPER_S128x128.vwsa"); // x64\release 사용으로 ..\ 추가됨.
                                                                                                                                                              // TestResource's path : QAGPT_Build_22_artifacts\target_directory\TestResource
 
                 IStream stream = workspace.Streams["default"]; // Store a reference to the stream 'default'
@@ -68,7 +68,7 @@ namespace QAGPTPJT
 
                 Console.WriteLine($"Step 3. Finish the getting processing time");
 
-                string csvFileName = "GetProcessingTime_ImageSize_128_test20230220-1.csv";
+                string csvFileName = "GetProcessingTime_ImageSize_128_test20230418-1.csv";
                 int indexcnt = 0;
                 //using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\" + csvFileName, false, System.Text.Encoding.GetEncoding("utf-8")))
                 using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\..\TestResultCSV\" + csvFileName, false, System.Text.Encoding.GetEncoding("utf-8")))
