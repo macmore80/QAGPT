@@ -15,7 +15,7 @@ namespace QAGPTPJT
     {
         static void Main(string[] args)
         {
-            Console.WriteLine($"QA starts test - 20230418"); // Modify test code version from Console.WriteLine($"QA starts test - 20230306");
+            Console.WriteLine($"QA starts test - 20230419"); // Modify test code version from Console.WriteLine($"QA starts test - 20230306");
 
             // Initializes the control, This initialization does not allocate any gpu ressources.
             using (ViDi2.Runtime.Local.Control control = new ViDi2.Runtime.Local.Control(GpuMode.Deferred))
@@ -45,8 +45,13 @@ namespace QAGPTPJT
 
 
                 // JK 20230419 - Start : Case 1. This under code line use when Red-HDM Tool applied in runtime
-                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;                
-                hdParam.ProcessTensorRT = true; // JK skip 20230418 becuase of using red focused super
+                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;
+                // JK Notity 20230419
+                // This runtime workspace didn't apply the optimized runtime by tenserRT.
+                //So You can not use the setting dParam.ProcessTensorRT whether it's true or false as below that.
+                //In conclusion, this setting have to skip as below when execution file was run after building in teamcity.
+                //hdParam.ProcessTensorRT = true; // To use, Need to do prework which have done build by Example.Runtime.OptimizeHDTool.console - 20230419
+                //hdParam.ProcessTensorRT = false; // This is case that runtime did not apply Optimized runtime.
                 // JK 20230419 - End
 
                 // JK 20230419 - Start : Case 2. This under code line use when Red-Focused Supervised Tool applied in runtime
