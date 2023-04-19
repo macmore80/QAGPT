@@ -24,9 +24,15 @@ namespace QAGPTPJT
                 control.InitializeComputeDevices(GpuMode.SingleDevicePerTool, new List<int>() { }); // Initializes all CUDA devices
                 /* Getting configuration in system e.g., GPU model, Driver Version, OS etc - It's next task*/
 
-                Console.WriteLine($"Step 1. Load RedHDM-Runtime worksapce & the directory of images.");
-                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_REDFSUPER_S128x128.vrws"); // x64\release 사용으로 ..\ 추가됨.
-                                                                                                                                                             // TestResource's path : QAGPT_Build_22_artifacts\target_directory\TestResource
+                Console.WriteLine($"Step 1. Load RedHDM-Runtime worksapce & the directory of images.");              
+
+                // JK 20230419 - Start : Case 1. This under code line use when Red-HDM Tool applied in runtime // TestResource's path : QAGPT_Build_22_artifacts\target_directory\TestResource
+                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\2_REDHDM_S128x128.vrws"); // x64\release 사용으로 ..\ 추가됨.                
+                // JK 20230419 - End
+
+                // JK 20230419 - Start : Case 2. This under code line use when Red-Focused Supervised Tool applied in runtime
+                //ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_REDFSUPER_S128x128.vrws"); // x64\release 사용으로 ..\ 추가됨.                
+                // JK 20230419 - End
 
                 IStream stream = workspace.Streams["default"]; // Store a reference to the stream 'default'
                 Stopwatch stopWatch = new Stopwatch();
@@ -36,9 +42,17 @@ namespace QAGPTPJT
                 Console.WriteLine("First Image info. : " + myImagesFiles.ElementAt(0));
 
                 ITool redTool = stream.Tools["Analyze"];
-                //var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;
-                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IRedTool; // JK modify 20230418 becuase of using red focused super
-                //hdParam.ProcessTensorRT = true; // JK skip 20230418 becuase of using red focused super
+
+
+                // JK 20230419 - Start : Case 1. This under code line use when Red-HDM Tool applied in runtime
+                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail;                
+                hdParam.ProcessTensorRT = true; // JK skip 20230418 becuase of using red focused super
+                // JK 20230419 - End
+
+                // JK 20230419 - Start : Case 2. This under code line use when Red-Focused Supervised Tool applied in runtime
+                //var hdParam = redTool.ParametersBase as ViDi2.Runtime.IRedTool; // JK modify 20230418 becuase of using red focused super
+                // JK 20230419 - End
+
                 // Process the image by the tool. All upstream tools are also processed                
                 List<string> stimeList = new List<string>(); // JK start : to get the spending time of each image.                
                 //Console.WriteLine($"img, processing time(ms)");
