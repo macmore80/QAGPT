@@ -257,6 +257,35 @@ namespace QAGPTPJT
             wb.SaveAs(@savePath);//, ReadOnlyRecommended:false); // checked saving file in this directory
             wb.Close();
             excelApp.Quit();
+
+            ReleaseObject(ws);
+            ReleaseObject(wb);
+            ReleaseObject(excelApp);
+        }
+
+        /// <summary>
+        /// 액셀 객체 해제 메소드
+        /// </summary>
+        /// <param name="obj"></param>
+        static void ReleaseObject(object obj)
+        {
+            try
+            {
+                if (obj != null)
+                {
+                    Marshal.ReleaseComObject(obj);  // 액셀 객체 해제
+                    obj = null;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                obj = null;
+                throw ex;
+            }
+            finally
+            {
+                GC.Collect();   // 가비지 수집
+            }
         }
 
 
