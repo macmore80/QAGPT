@@ -35,7 +35,9 @@ namespace QAGPTPJT
                 /* Getting configuration in system e.g., GPU model, Driver Version, OS etc - It's next task*/
                 Console.WriteLine("[Configuration of the current agent in teamcity]");
                 Console.WriteLine(" - VPDL Ver.: " + control.CLibraryVersion);
-                Console.WriteLine(" - GPU Model: {0}", control.ComputeDevices[0].Name);// Index: control.ComputeDevices[0].Index.ToString()
+
+                // ********** Notify : If These is not GPU in using Agent e.g., #7, You need to skip this code line.
+                //Console.WriteLine(" - GPU Model: {0}", control.ComputeDevices[0].Name);// Index: control.ComputeDevices[0].Index.ToString()
 
                 // Step 1. Load RedHDM-Runtime worksapce & the directory of images. /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
