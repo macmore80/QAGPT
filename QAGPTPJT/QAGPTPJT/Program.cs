@@ -41,7 +41,8 @@ namespace QAGPTPJT
 
                 // Step 1. Load RedHDM-Runtime worksapce & the directory of images. /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                Console.WriteLine($"\nStep 1. Load RedHDM-Runtime worksapce & the directory of images.");
+                //Console.WriteLine($"\nStep 1. Load RedHDM-Runtime worksapce & the directory of images.");
+                Console.WriteLine($"\nStep 1. Load RedFocusedSuperHDM-Runtime worksapce & the directory of images.");
                 // initialization for using Stopwatch and saving result of processing time.
                 Stopwatch stopWatch = new Stopwatch();
                 List<string> stimeList = new List<string>(); // JK start : to get the spending time of each image.                
