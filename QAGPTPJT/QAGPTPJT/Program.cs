@@ -46,13 +46,13 @@ namespace QAGPTPJT
                 // Process the image by the tool. All upstream tools are also processed // Console.WriteLine($"img, processing time(ms)");
 
                 // Set Runtime of Red Tool 
-                string pathRuntime_Red_HDM = "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_RED_HighDetailMode.vrws";
-                Console.WriteLine(" - Runtime Path: {0}", pathRuntime_Red_HDM);// Index: control.ComputeDevices[0].Index.ToString()
-                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", pathRuntime_Red_HDM);
+                //string pathRuntime_Red_HDM = "..\\..\\..\\..\\..\\TestResource\\Runtime\\1_RED_HighDetailMode.vrws";
+                //Console.WriteLine(" - Runtime Path: {0}", pathRuntime_Red_HDM);// Index: control.ComputeDevices[0].Index.ToString()
+                //ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", pathRuntime_Red_HDM);
 
-                //string pathRuntime_Red_FSu = "..\\..\\..\\..\\..\\TestResource\\Runtime\\2_RED_FocusedSupervised.vrws";
-                //Console.WriteLine(" - Runtime Path: {0}", pathRuntime_Red_FSu);// Index: control.ComputeDevices[0].Index.ToString()
-                //ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", pathRuntime_Red_FSu);
+                string pathRuntime_Red_FSu = "..\\..\\..\\..\\..\\TestResource\\Runtime\\2_RED_FocusedSupervised.vrws";
+                Console.WriteLine(" - Runtime Path: {0}", pathRuntime_Red_FSu);// Index: control.ComputeDevices[0].Index.ToString()
+                ViDi2.Runtime.IWorkspace workspace = control.Workspaces.Add("workspace", pathRuntime_Red_FSu);
 
                 //string pathRuntime_Red_FUn = "..\\..\\..\\..\\..\\TestResource\\Runtime\\3_RED_FocusedUnsupervised.vrws";
                 //Console.WriteLine(" - Runtime Path: {0}", pathRuntime_Red_FUn);// Index: control.ComputeDevices[0].Index.ToString()
@@ -61,9 +61,9 @@ namespace QAGPTPJT
                 IStream stream = workspace.Streams["default"]; // Store a reference to the stream 'default'
                 ITool redTool = stream.Tools["Analyze"];
 
-                //var hdParam = redTool.ParametersBase as ViDi2.Runtime.IRedTool; // in case of usnign Red Focused Tool's runtime
+                //var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail; // in case of usnign Red HDM Tool's runtime
+                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IRedTool; // in case of usnign Red Focused Tool's runtime
 
-                var hdParam = redTool.ParametersBase as ViDi2.Runtime.IToolParametersHighDetail; // in case of usnign Red HDM Tool's runtime
                 //hdParam.ProcessTensorRT = true; // To use, Need to do prework which have done build by Example.Runtime.OptimizeHDTool.console - 20230419
                 //hdParam.ProcessTensorRT = false; // This is case that runtime did not apply Optimized runtime.
                 // This runtime workspace didn't apply the optimized runtime by tenserRT. So You can not use the setting dParam.ProcessTensorRT whether it's true or false as below that. In conclusion, this setting have to skip as below when execution file was run after building in teamcity.
