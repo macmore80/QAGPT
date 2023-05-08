@@ -24,7 +24,7 @@ namespace QAGPTPJT
     static class Constants
     {
         public const int RepeatProcess = 5000;
-        //public const int RepeatProcess = 10;
+        //public const int RepeatProcess = 3;
     }
 
     class Program
@@ -39,6 +39,78 @@ namespace QAGPTPJT
                 control.InitializeComputeDevices(GpuMode.SingleDevicePerTool, new List<int>() { });
                 Stopwatch stopWatch = new Stopwatch();
 
+                // Blue Locate - Start // BlueLocate
+                Console.WriteLine($"\n - Blue Locate - Start");
+                List<string> BlueLocateTimeList = new List<string>();
+                string pathRuntime_BlueLocate = "..\\..\\..\\..\\..\\TestResource\\Runtime\\6_BlueLocate.vrws";
+                Console.WriteLine(" - Runtime Path: {0}", pathRuntime_BlueLocate);// Index: control.ComputeDevices[0].Index.ToString()
+                ViDi2.Runtime.IWorkspace workspaceBlueLocate = control.Workspaces.Add("workspaceBlueLocate", pathRuntime_BlueLocate);
+                IStream streamBlueLocate = workspaceBlueLocate.Streams["default"];
+                ITool BlueLocateTool = streamBlueLocate.Tools["Locate"];
+                var BlueLocateParam = BlueLocateTool.ParametersBase as ViDi2.Runtime.IBlueTool;
+                string pathBlueImagesBlueLocate = "..\\..\\..\\..\\..\\TestResource\\Images_BlueLocate";
+                var extBlueLocate = new System.Collections.Generic.List<string> { ".jpg", ".bmp", ".png" };
+                var myImagesFilesBlueLocate = Directory.GetFiles(pathBlueImagesBlueLocate, "*.*", SearchOption.TopDirectoryOnly).Where(s => extBlueLocate.Any(e => s.EndsWith(e)));
+                Console.WriteLine("First Image info. : " + myImagesFilesBlueLocate.ElementAt(0));
+                long sumBlueLocate = 0;
+                int countBlueLocate = 0;
+                var fileBlueLocate = myImagesFilesBlueLocate.ElementAt(0);
+                for (int repeatcnt = 0; repeatcnt < Constants.RepeatProcess; repeatcnt++)
+                {
+                    countBlueLocate++;
+                    using (IImage image = new LibraryImage(fileBlueLocate))
+                    {
+                        using (ISample sample = streamBlueLocate.CreateSample(image))
+                        {
+                            stopWatch.Start();
+                            sample.Process(BlueLocateTool);
+                            stopWatch.Stop();
+                            sumBlueLocate += stopWatch.ElapsedMilliseconds;
+                            BlueLocateTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
+                            stopWatch.Reset();
+                        }
+                    }
+                }
+                double avgBlueLocate = sumBlueLocate / (double)countBlueLocate;
+                Console.WriteLine(" - Processing Time Average({0} images): {1} [msec]", (int)countBlueLocate, avgBlueLocate);
+                // Blue Locate - End
+
+                // Blue Read - Start // BlueRead
+                Console.WriteLine($"\n - Blue Read - Start");
+                List<string> BlueReadTimeList = new List<string>();
+                string pathRuntime_BlueRead = "..\\..\\..\\..\\..\\TestResource\\Runtime\\7_BlueRead.vrws";
+                Console.WriteLine(" - Runtime Path: {0}", pathRuntime_BlueRead);// Index: control.ComputeDevices[0].Index.ToString()
+                ViDi2.Runtime.IWorkspace workspaceBlueRead = control.Workspaces.Add("workspaceBlueRead", pathRuntime_BlueRead);
+                IStream streamBlueRead = workspaceBlueRead.Streams["default"];
+                ITool BlueReadTool = streamBlueRead.Tools["Read"];
+                var BlueReadParam = BlueReadTool.ParametersBase as ViDi2.Runtime.IBlueTool;
+                string pathBlueImagesBlueRead = "..\\..\\..\\..\\..\\TestResource\\Images_BlueRead";
+                var extBlueRead = new System.Collections.Generic.List<string> { ".jpg", ".bmp", ".png" };
+                var myImagesFilesBlueRead = Directory.GetFiles(pathBlueImagesBlueRead, "*.*", SearchOption.TopDirectoryOnly).Where(s => extBlueRead.Any(e => s.EndsWith(e)));
+                Console.WriteLine("First Image info. : " + myImagesFilesBlueRead.ElementAt(0));
+                long sumBlueRead = 0;
+                int countBlueRead = 0;
+                var fileBlueRead = myImagesFilesBlueRead.ElementAt(0);
+                for (int repeatcnt = 0; repeatcnt < Constants.RepeatProcess; repeatcnt++)
+                {
+                    countBlueRead++;
+                    using (IImage image = new LibraryImage(fileBlueRead))
+                    {
+                        using (ISample sample = streamBlueRead.CreateSample(image))
+                        {
+                            stopWatch.Start();
+                            sample.Process(BlueReadTool);
+                            stopWatch.Stop();
+                            sumBlueRead += stopWatch.ElapsedMilliseconds;
+                            BlueReadTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
+                            stopWatch.Reset();
+                        }
+                    }
+                }
+                double avgBlueRead = sumBlueRead / (double)countBlueRead;
+                Console.WriteLine(" - Processing Time Average({0} images): {1} [msec]", (int)countBlueRead, avgBlueRead);
+
+                // Blue Read - End
 
                 // Green HDM - Start
                 Console.WriteLine($"\n - Green HDM - Start");
@@ -279,21 +351,33 @@ namespace QAGPTPJT
                 var getResultListGreenFocused = new List<string>();
                 var getResultListGreenHDMQucik = new List<string>();
 
+                var getResultListBlueLocate = new List<string>();
+
+                var getResultListBlueRead = new List<string>();
+
+
                 using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\..\TestResultCSV\" + csvFileName, true, System.Text.Encoding.GetEncoding("utf-8")))
                 {
-                    resultFile.WriteLine("Red Image, RedHDM, RedFSu, RedFUn, Green Image, GreenHDM, GreenFcs, GreenHDMQ ");
+                    resultFile.WriteLine("Red Image, RedHDM, RedFSu, RedFUn, Green Image, GreenHDM, GreenFcs, GreenHDMQ, BlueLocate Image, BlueLocate, BlueRead Image, BlueRead ");
                     for (int indexcnt = 0; indexcnt < Constants.RepeatProcess; indexcnt++)
                     {
                         // Adding Green HDM Tool's getting process time.
-                        // 0. Red Image, 1. RedHDM, 2. RedFSu, 3. RedFUn, 4. Green Image, 5. GreenHDM, 6. GreenFcs, 7. GreenHDMQ
-                        resultFile.WriteLine("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}", myImagesFilesRedHDM.ElementAt(0), RedHDMTimeList[indexcnt].ToString(), RedFSuTimeList[indexcnt].ToString(), RedFUnTimeList[indexcnt].ToString(), myImagesFilesGreenHDM.ElementAt(0), GreenHDMTimeList[indexcnt].ToString(), GreenFocusedTimeList[indexcnt].ToString(), GreenHDMQTimeList[indexcnt].ToString());
+                        // 0. Red Image, 1. RedHDM, 2. RedFSu, 3. RedFUn, 4. Green Image, 5. GreenHDM, 6. GreenFcs, 7. GreenHDMQ, 8. BlueLocate Image, 9. BlueLocate 10. BlueRead Image, 11. BlueRead
+                        resultFile.WriteLine("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}", myImagesFilesRedHDM.ElementAt(0), RedHDMTimeList[indexcnt].ToString(), RedFSuTimeList[indexcnt].ToString(), RedFUnTimeList[indexcnt].ToString(), myImagesFilesGreenHDM.ElementAt(0), GreenHDMTimeList[indexcnt].ToString(), GreenFocusedTimeList[indexcnt].ToString(), GreenHDMQTimeList[indexcnt].ToString(), myImagesFilesBlueLocate.ElementAt(0), BlueLocateTimeList[indexcnt].ToString(), myImagesFilesBlueRead.ElementAt(0), BlueReadTimeList[indexcnt].ToString());
 
                         getResultListRedHDM.Add(RedHDMTimeList[indexcnt].ToString());
                         getResultListRedFSu.Add(RedFSuTimeList[indexcnt].ToString());
                         getResultListRedFUn.Add(RedFUnTimeList[indexcnt].ToString());
+
                         getResultListGreenHDM.Add(GreenHDMTimeList[indexcnt].ToString());
                         getResultListGreenFocused.Add(GreenFocusedTimeList[indexcnt].ToString());
                         getResultListGreenHDMQucik.Add(GreenHDMQTimeList[indexcnt].ToString());
+
+                        getResultListBlueLocate.Add(BlueLocateTimeList[indexcnt].ToString());
+
+                        getResultListBlueRead.Add(BlueReadTimeList[indexcnt].ToString());
+
+
                     }
                 }
                 Console.WriteLine(" - Result CSV File: {0}", csvFileName);
@@ -305,12 +389,13 @@ namespace QAGPTPJT
                 Console.WriteLine(strExcelFileDirectory);
 
                 //ExcelDataEPPlusRedTools(getResultListRedHDM, getResultListRedFSu, getResultListRedFUn, strExcelFileDirectory); // create epplus excel  - 20230504
-                ExcelDataEPPlusRedTools(getResultListRedHDM, getResultListRedFSu, getResultListRedFUn, getResultListGreenHDM, getResultListGreenFocused, getResultListGreenHDMQucik, strExcelFileDirectory); // Adding Green HDM Tool in the create epplus excel  - 20230508
+                //ExcelDataEPPlusRedTools(getResultListRedHDM, getResultListRedFSu, getResultListRedFUn, getResultListGreenHDM, getResultListGreenFocused, getResultListGreenHDMQucik, getResultListBlueLocate, strExcelFileDirectory); // Adding Green HDM Tool in the create epplus excel  - 20230508
+                ExcelDataEPPlusRedTools(getResultListRedHDM, getResultListRedFSu, getResultListRedFUn, getResultListGreenHDM, getResultListGreenFocused, getResultListGreenHDMQucik, getResultListBlueLocate, getResultListBlueRead, strExcelFileDirectory); // Adding Green HDM Tool in the create epplus excel  - 20230508
                 Console.WriteLine("\nStep 4. Complete QA Test - Get Processing time of Red Tool");
             }
         }
 
-        private static void ExcelDataEPPlusRedTools(List<string> GetPTimesRedHDM, List<string> GetPTimesRedFSu, List<string> GetPTimesRedFUn, List<string> GetPTimesGreenHDM, List<string> GetPTimesGreenFocused, List<string> GetPTimesGreenHDMQuick, string savePath)
+        private static void ExcelDataEPPlusRedTools(List<string> GetPTimesRedHDM, List<string> GetPTimesRedFSu, List<string> GetPTimesRedFUn, List<string> GetPTimesGreenHDM, List<string> GetPTimesGreenFocused, List<string> GetPTimesGreenHDMQuick, List<string> GetPTimesBlueLocate, List<string> GetPTimesBlueRead, string savePath)
         {
             Console.WriteLine("JK Test 1. Create Excel File");
             ExcelPackage ExcelPkg = new ExcelPackage();
@@ -393,6 +478,53 @@ namespace QAGPTPJT
             wsSheetGreen.Protection.AllowSelectLockedCells = false;
             // Green - End
 
+
+            // Blue Locate - Start //GetPTimesBlueLocate
+            ExcelWorksheet wsSheetBlueL = ExcelPkg.Workbook.Worksheets.Add("BlueLocateTool"); // Green Tools
+
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 1, 1, 1])  // 1x1
+            {
+                //Rng.Value = "QA JK's Task : Get processing time in teamcity!";
+                Rng.Value = "Repeat";
+                Rng.Style.Font.Size = 11; //16;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 2, 1, 2])
+            {
+                //Rng.Value = "QA JK's Task : Get processing time in teamcity!";
+                Rng.Value = "Blue Locate";
+                Rng.Style.Font.Size = 11; //16;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+            }
+            wsSheetBlueL.Protection.IsProtected = false;
+            wsSheetBlueL.Protection.AllowSelectLockedCells = false;
+            // Blue Locate - End
+
+            // Blue Read - Start
+            ExcelWorksheet wsSheetBlueR = ExcelPkg.Workbook.Worksheets.Add("BlueReadTool"); // Green Tools
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 1, 1, 1])  // 1x1
+            {
+                //Rng.Value = "QA JK's Task : Get processing time in teamcity!";
+                Rng.Value = "Repeat";
+                Rng.Style.Font.Size = 11; //16;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 2, 1, 2])
+            {
+                //Rng.Value = "QA JK's Task : Get processing time in teamcity!";
+                Rng.Value = "Blue Read";
+                Rng.Style.Font.Size = 11; //16;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+            }
+            wsSheetBlueR.Protection.IsProtected = false;
+            wsSheetBlueR.Protection.AllowSelectLockedCells = false;
+            // Blue Read - End
+
             ExcelPkg.SaveAs(new FileInfo(@savePath));
             Console.WriteLine(" - Complete the creating excel file!");
 
@@ -425,7 +557,8 @@ namespace QAGPTPJT
                 }
 
                 var chartRedTools = worksheetRedTools.Drawings.AddChart("Chart_Red", eChartType.Line);
-                chartRedTools.Title.Text = "Processing Time Red Tool(HDM/FSu/FUn)"; ////From row 1 colum 5 with five pixels offset                
+                chartRedTools.Title.Text = "Processing Time Red Tool(HDM/FSu/FUn)[ms]"; ////From row 1 colum 5 with five pixels offset                
+                //chartRedTools.Title.Font.Color = Color.FromArgb(238, 46, 34);
                 chartRedTools.Title.Font.Size = 14;
                 chartRedTools.Title.Font.Bold = true;
                 chartRedTools.Title.Font.Italic = true;
@@ -449,7 +582,11 @@ namespace QAGPTPJT
 
                 chartRedTools.Legend.Border.LineStyle = eLineStyle.Solid;
                 chartRedTools.Legend.Border.Fill.Style = eFillStyle.SolidFill;
-                chartRedTools.Legend.Border.Fill.Color = Color.DarkBlue;
+                chartRedTools.Legend.Border.Fill.Color = Color.DarkRed;
+                //chartRedTools.Border.Width = 1;
+                chartRedTools.Border.Fill.Color = Color.DarkRed; // Color.FromArgb(238, 46, 34);
+
+
                 // RedTools Chart - End
 
                 // GreenTools Chart - Start
@@ -474,7 +611,8 @@ namespace QAGPTPJT
                 }
 
                 var chartGreenTools = worksheetGreenTools.Drawings.AddChart("Chart_Green", eChartType.Line);
-                chartGreenTools.Title.Text = "Processing Time Green Tool(HDM/Focused/HDMQuick)"; ////From row 1 colum 5 with five pixels offset                
+                chartGreenTools.Title.Text = "Processing Time Green Tool(HDM/Focused/HDMQuick)[ms]"; ////From row 1 colum 5 with five pixels offset                
+                //chartGreenTools.Title.Font.Color = Color.FromArgb(16, 203, 34);
                 chartGreenTools.Title.Font.Size = 14;
                 chartGreenTools.Title.Font.Bold = true;
                 chartGreenTools.Title.Font.Italic = true;
@@ -498,8 +636,79 @@ namespace QAGPTPJT
 
                 chartGreenTools.Legend.Border.LineStyle = eLineStyle.Solid;
                 chartGreenTools.Legend.Border.Fill.Style = eFillStyle.SolidFill;
-                chartGreenTools.Legend.Border.Fill.Color = Color.DarkBlue;
-                // RedTools Chart - End
+                chartGreenTools.Legend.Border.Fill.Color = Color.DarkGreen;
+                //chartGreenTools.Border.Width = 1;
+                chartGreenTools.Border.Fill.Color = Color.DarkGreen; //Color.FromArgb(16, 203, 34);
+                // GreenTools Chart - End
+
+                // BlueLocate Chart - Start
+                ExcelWorksheet worksheetBlueLocateTool = package.Workbook.Worksheets["BlueLocateTool"];
+                int columnBlueLocateTool = 1;
+                for (int row = 2; row < (Constants.RepeatProcess + 2); row++) // using repeat 100 times = 102
+                    worksheetBlueLocateTool.Cells[row, columnBlueLocateTool].Value = row - 1;
+                int colBlueLocateTool = 2;    // Red HDM
+                for (int row = 2; row < (Constants.RepeatProcess + 2); row++) // using repeat 100 times = 102
+                {
+                    worksheetBlueLocateTool.Cells[row, colBlueLocateTool].Value = int.Parse(GetPTimesBlueLocate[row - 2]);
+                }
+
+                var chartBlueLocateTool = worksheetBlueLocateTool.Drawings.AddChart("Chart_BlueLocate", eChartType.Line);
+                chartBlueLocateTool.Title.Text = "Processing Time Blue Locate Tool[ms]"; //From row 1 colum 5 with five pixels offset
+                //chartBlueLocateTool.Title.Font.Color = Color.FromArgb(0, 145, 255);
+                chartBlueLocateTool.Title.Font.Size = 14;
+                chartBlueLocateTool.Title.Font.Bold = true;
+                chartBlueLocateTool.Title.Font.Italic = true;
+                chartBlueLocateTool.SetPosition(1, 1, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
+                chartBlueLocateTool.SetSize(800, 600);
+
+                ExcelAddress valueAddress_Data1_BlueLocateTool = new ExcelAddress(2, 2, (Constants.RepeatProcess + 1), 2); // using repeat 100 times
+                ExcelAddress RepeatAddress_Data1_BlueLocateTool = new ExcelAddress(2, 1, (Constants.RepeatProcess + 1), 1);
+                var ser1_BlueLocateTool = (chartBlueLocateTool.Series.Add(valueAddress_Data1_BlueLocateTool.Address, RepeatAddress_Data1_BlueLocateTool.Address) as ExcelLineChartSerie); // using repeat 100 time
+                ser1_BlueLocateTool.Header = "Blue Locate";
+
+                chartBlueLocateTool.Legend.Border.LineStyle = eLineStyle.Solid;
+                chartBlueLocateTool.Legend.Border.Fill.Style = eFillStyle.SolidFill;
+                chartBlueLocateTool.Legend.Border.Fill.Color = Color.DarkBlue;
+                //chartBlueLocateTool.Border.Width = 1;
+                chartBlueLocateTool.Border.Fill.Color = Color.DarkBlue;
+
+                // BlueLocare Chart - End
+
+                // BlueRead Chart - Start
+                ExcelWorksheet worksheetBlueReadTool = package.Workbook.Worksheets["BlueReadTool"];
+                int columnBlueRead = 1;
+                for (int row = 2; row < (Constants.RepeatProcess + 2); row++) // using repeat 100 times = 102
+                    worksheetBlueReadTool.Cells[row, columnBlueRead].Value = row - 1;
+                int colBlueReadTool = 2;    // Red HDM
+                for (int row = 2; row < (Constants.RepeatProcess + 2); row++) // using repeat 100 times = 102
+                {
+                    worksheetBlueReadTool.Cells[row, colBlueReadTool].Value = int.Parse(GetPTimesBlueRead[row - 2]);
+                }
+
+                var chartBlueReadTool = worksheetBlueReadTool.Drawings.AddChart("Chart_BlueRead", eChartType.Line);
+                chartBlueReadTool.Title.Text = "Processing Time Blue Read Tool[ms]"; ////From row 1 colum 5 with five pixels offset                
+                //chartBlueReadTool.Title.Font.Color = Color.FromArgb(0, 75, 163);
+                chartBlueReadTool.Title.Font.Size = 14;
+                chartBlueReadTool.Title.Font.Bold = true;
+                chartBlueReadTool.Title.Font.Italic = true;
+                chartBlueReadTool.SetPosition(1, 1, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
+                chartBlueReadTool.SetSize(800, 600);
+
+                ExcelAddress valueAddress_Data1_BlueReadTool = new ExcelAddress(2, 2, (Constants.RepeatProcess + 1), 2); // using repeat 100 times
+                ExcelAddress RepeatAddress_Data1_BlueReadTool = new ExcelAddress(2, 1, (Constants.RepeatProcess + 1), 1);
+                var ser1_BlueReadTool = (chartBlueReadTool.Series.Add(valueAddress_Data1_BlueReadTool.Address, RepeatAddress_Data1_BlueReadTool.Address) as ExcelLineChartSerie); // using repeat 100 time
+                ser1_BlueReadTool.Header = "Blue Read";
+
+                chartBlueReadTool.Legend.Border.LineStyle = eLineStyle.Solid;
+                chartBlueReadTool.Legend.Border.Fill.Style = eFillStyle.SolidFill;
+                chartBlueReadTool.Legend.Border.Fill.Color = Color.DarkBlue;
+                //chartBlueReadTool.Border.Width = 1;
+                chartBlueReadTool.Border.Fill.Color = Color.DarkBlue;
+
+
+
+                // BlueRead Chart - End
+
 
                 package.Save();
             }
