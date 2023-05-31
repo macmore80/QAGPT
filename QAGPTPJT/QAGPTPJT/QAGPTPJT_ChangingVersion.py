@@ -1,7 +1,6 @@
 import os
 import re
 import argparse # Step 1. import argparse
-import numpy as np
 import xml.etree.ElementTree as ET
 
 print('Start : Modify ViDi packages version to use Artifact dependencies in teamcity')
