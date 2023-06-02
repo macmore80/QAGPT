@@ -25,7 +25,7 @@ namespace QAGPTPJT
 {
     static class Constants
     {
-        public const int RepeatProcess = 5000;
+        public const int RepeatProcess = 15000;
         //public const int RepeatProcess = 10;
     }
 
