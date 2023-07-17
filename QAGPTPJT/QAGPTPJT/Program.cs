@@ -35,7 +35,7 @@ namespace QAGPTPJT
 {
     static class Constants
     {
-        public const int RepeatProcess = 3; // When initialised variabl, if It include 'const' in type string, This value never change.        
+        public const int RepeatProcess = 10; // When initialised variabl, if It include 'const' in type string, This value never change.        
     }
 
     public static class TestConfigurationItems
@@ -1329,43 +1329,49 @@ namespace QAGPTPJT
 
                 // JK-Modified-2023.07.17 - Start
 
-                using (ExcelRange Rng = worksheet.Cells[1, 1, 39, 1]) // PC OS Info.
+                using (ExcelRange Rng = worksheet.Cells[1, 1, 40, 1]) // PC OS Info.
                 {
                     Rng.Style.Font.Italic = true;
                 }
-                using (ExcelRange Rng = worksheet.Cells[1, 1, 1, 1]) // PC OS Info.
+                using (ExcelRange Rng = worksheet.Cells[1, 1, 1, 1]) // Title
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+                using (ExcelRange Rng = worksheet.Cells[2, 1, 2, 1]) // PC OS Info.
                 {
                     Rng.Style.Font.Size = 11;
                     Rng.Style.Font.Bold = true;
                     Rng.Style.Font.Italic = false;
                 }
 
-                using (ExcelRange Rng = worksheet.Cells[4, 1, 4, 1]) // GUI Info.
+                using (ExcelRange Rng = worksheet.Cells[5, 1, 5, 1]) // GUI Info.
                 {
                     Rng.Style.Font.Size = 11;
                     Rng.Style.Font.Bold = true;
                     Rng.Style.Font.Italic = false;
                 }
 
-                using (ExcelRange Rng = worksheet.Cells[11, 1, 11, 1]) // VPDL Info.
+                using (ExcelRange Rng = worksheet.Cells[12, 1, 12, 1]) // VPDL Info.
                 {
                     Rng.Style.Font.Size = 11;
                     Rng.Style.Font.Bold = true;
                     Rng.Style.Font.Italic = false;
                 }
-                using (ExcelRange Rng = worksheet.Cells[13, 1, 13, 1]) // License Info.
+                using (ExcelRange Rng = worksheet.Cells[14, 1, 14, 1]) // License Info.
                 {
                     Rng.Style.Font.Size = 11;
                     Rng.Style.Font.Bold = true;
                     Rng.Style.Font.Italic = false;
                 }
-                using (ExcelRange Rng = worksheet.Cells[22, 1, 22, 1]) // Runtime workspaces
+                using (ExcelRange Rng = worksheet.Cells[23, 1, 23, 1]) // Runtime workspaces
                 {
                     Rng.Style.Font.Size = 11;
                     Rng.Style.Font.Bold = true;
                     Rng.Style.Font.Italic = false;
                 }
-                using (ExcelRange Rng = worksheet.Cells[31, 1, 31, 1]) // Test Image files Info.
+                using (ExcelRange Rng = worksheet.Cells[32, 1, 32, 1]) // Test Image files Info.
                 {
                     Rng.Style.Font.Size = 11;
                     Rng.Style.Font.Bold = true;
@@ -1374,9 +1380,9 @@ namespace QAGPTPJT
                 // JK-Modified-2023.07.17 - End
 
                 // Fill in the system's information
-                int col = 1;
-                for (int row = 1; row < getTestConfigurationList.Count; row++)
-                    worksheet.Cells[row, col].Value = getTestConfigurationList.ElementAt(row);
+                int col = 0;
+                for (int row = 0; row < getTestConfigurationList.Count; row++) // 2023.07.17 getTestConfigurationList.Count=40 >> 0~39
+                    worksheet.Cells[row + 1, col + 1].Value = getTestConfigurationList.ElementAt(row);
                 excelPackage.Save();
             }
         }
@@ -2898,5 +2904,5 @@ namespace QAGPTPJT
 }
 // Save info
 // H:\_2_CCCCC_modification_addingresult\QAGPT_No164_28557\QAGPT_Build_164_artifacts\target_directory\QAGPTPJT\QAGPTPJT
-// Program_TaskDay_20230717.cs
-// 오후 6:18 2023-07-17
+// Program_TaskDay_20230717-2043.cs
+// 오후 8:44 2023-07-17
