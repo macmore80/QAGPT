@@ -17,16 +17,30 @@ using ViDi2.Local;
 using System.Runtime.InteropServices;
 using Excel = Microsoft.Office.Interop.Excel;
 
+
+// JK - Modification log
 // Note : JK modify code 2023.05.04 : processing Red Tool(HDM, FSu, FUn)  and Saving result and Chart in Excel
 // Note : JK modify code 2023.05.08 : Adding Green Tools(HDM, Focused, HDM Quick), This data save in Excel file as above.
 // Note : JK Modify code 2023.05.09 : To analsy result, Add data which are max, min, average in excel file. And include test system's configuration
+// Note : JK have checked the setting build to add result data about all tools after gettting the processing tiems - 20230704
+// Note : // JK-AddResult-Start - 2023.07.06 : JK Modify code 2023.07.06 : Adding results which got from tool after processing tool.
+// Note : //JK-AddResult-End - 2023.07.11 : Regarding Blue Read, Adding code
+// Note : // JK - 2023.07.12 - End : Adding code which add results of Green and Red, Fix font, color, etc in Excel file.
+// Note : // JK-AddResultOFGreen-2023.07.12- Start & // JK-AddResultOFRed-2023.07.12- Start
+// Note : // JK-ModifyCodeRedHDM-2023.07.13- Start
+// Note : // JK-Modified-2023.07.17 - Start  : Modified contents in TestConfiguration and the saved file name which have to include VPDL version number.
+
 
 namespace QAGPTPJT
 {
     static class Constants
     {
-        public const int RepeatProcess = 15000;
-        //public const int RepeatProcess = 10;
+        public const int RepeatProcess = 3; // When initialised variabl, if It include 'const' in type string, This value never change.        
+    }
+
+    public static class TestConfigurationItems
+    {
+        public static string VPDLVers = "0.0.0.00000";
     }
 
     public class JKCtrlDirectory
@@ -43,7 +57,6 @@ namespace QAGPTPJT
                     Console.WriteLine(" - The existed directory : \n\t" + currentPath + "\\" + path);
                     return;
                 }
-
                 // Try to create the directory.
                 DirectoryInfo di = Directory.CreateDirectory(path);
                 Console.WriteLine("The directory was created successfully at {0}.", Directory.GetCreationTime(path));
@@ -59,13 +72,209 @@ namespace QAGPTPJT
             }
             finally { }
         }
-
     }
 
     class Program
     {
+        // JK Note - start : 2023.07.11 - Adding a structure of result of matching blue read model
+        // refer to  : tnmsoft.tistory.com/304
+        // refer to : nonstop-antoine.tistory.com/47#google_vignette
+        public struct BlueReadMatchFeatureResult
+        {
+            public string Name;
+            public double Score;
+            public double PosX;
+            public double PosY;
+            public double Angle;
+            public double SizeHeight;
+            public double SizeWidth;
+            public BlueReadMatchFeatureResult(string name, double score, double posx, double posy, double angle, double sizeheight, double sizewidth)
+            {
+                Name = name;
+                Score = score;
+                PosX = posx;
+                PosY = posy;
+                Angle = angle;
+                SizeHeight = sizeheight;
+                SizeWidth = sizewidth;
+            }
+        }
+        // JK Note - end : 2023.07.11 - Adding a structure of result of matching blue read model
+
+        // JK-AddResultOFGreen-2023.07.12- Start
+        public struct GreenHDMMatchAndViewResult
+        {
+            // view
+            public string BestTagName;
+            public double BestTagScore;
+            public double Threshold;
+            public double SizeHeight;
+            public double SizeWidth;
+
+            public GreenHDMMatchAndViewResult(string besttagname, double besttagscore, double threshold, double sizeheight, double sizewidth)
+            {
+                BestTagName = besttagname;
+                BestTagScore = besttagscore;
+                Threshold = threshold;
+                SizeHeight = sizeheight;
+                SizeWidth = sizewidth;
+            }
+
+
+            //// JK Memo : If you want to gather all tag names, refer to 'view.Tags', This array type variable has four case of Name and score. For example, A, B, C, D. then modify the code below.
+            //// Match
+            //public string Name;
+            //public double Score;
+            //// view
+            //public string BestTagName;
+            //public double BestTagScore;            
+            //public double Threshold;
+            //public double SizeHeight;
+            //public double SizeWidth;
+
+            //public GreenHDMMatchAndViewResult(string name, double score, string besttagname, double besttagscore, double threshold, double sizeheight, double sizewidth)
+            //{
+            //    Name = name;
+            //    Score = score;
+            //    BestTagName = besttagname;
+            //    BestTagScore = besttagscore;
+            //    Threshold = threshold;
+            //    SizeHeight = sizeheight;
+            //    SizeWidth = sizewidth;
+            //}
+        }
+
+        public struct GreenFocusedMatchAndViewResult
+        {
+            public string BestTagName;
+            public double BestTagScore;
+            public double Threshold;
+            public double SizeHeight;
+            public double SizeWidth;
+
+            public GreenFocusedMatchAndViewResult(string besttagname, double besttagscore, double threshold, double sizeheight, double sizewidth)
+            {
+                BestTagName = besttagname;
+                BestTagScore = besttagscore;
+                Threshold = threshold;
+                SizeHeight = sizeheight;
+                SizeWidth = sizewidth;
+            }
+        }
+
+        public struct GreenHDMQuickMatchAndViewResult
+        {
+            public string BestTagName;
+            public double BestTagScore;
+            public double Threshold;
+            public double SizeHeight;
+            public double SizeWidth;
+
+            public GreenHDMQuickMatchAndViewResult(string besttagname, double besttagscore, double threshold, double sizeheight, double sizewidth)
+            {
+                BestTagName = besttagname;
+                BestTagScore = besttagscore;
+                Threshold = threshold;
+                SizeHeight = sizeheight;
+                SizeWidth = sizewidth;
+            }
+        }
+
+        // JK-AddResultOFGreen-2023.07.12- End
+
+        // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+        public struct RedHDMRegionResult
+        {
+            public string Name;
+            public double Score;
+            public double Area;
+            public double CenterX;
+            public double CenterY;
+            public int OuterCount;
+            public int InnerCount;
+
+            public RedHDMRegionResult(string name, double score, double area, double centerx, double centery, int outercount, int innercount)
+            {
+                Name = name;
+                Score = score;
+                Area = area;
+                CenterX = centerx;
+                CenterY = centery;
+                OuterCount = outercount;
+                InnerCount = innercount;
+            }
+        }
+
+        public struct RedFocusedSupervisedRegionResult
+        {
+            public string Name;
+            public double Score;
+            public double Area;
+            public double CenterX;
+            public double CenterY;
+            public int OuterCount;
+            public int InnerCount;
+
+            public RedFocusedSupervisedRegionResult(string name, double score, double area, double centerx, double centery, int outercount, int innercount)
+            {
+                Name = name;
+                Score = score;
+                Area = area;
+                CenterX = centerx;
+                CenterY = centery;
+                OuterCount = outercount;
+                InnerCount = innercount;
+            }
+        }
+
+        public struct RedFocusedUnsupervisedRegionResult
+        {
+            public string Name;
+            public double Score;
+            public double Area;
+            public double CenterX;
+            public double CenterY;
+            public int OuterCount;
+            public int InnerCount;
+
+            public RedFocusedUnsupervisedRegionResult(string name, double score, double area, double centerx, double centery, int outercount, int innercount)
+            {
+                Name = name;
+                Score = score;
+                Area = area;
+                CenterX = centerx;
+                CenterY = centery;
+                OuterCount = outercount;
+                InnerCount = innercount;
+            }
+        }
+
+        // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
+
+
+
         static void Main(string[] args)
         {
+            // JK Test - Start -  using Structure of List type : 2023.07.11
+            List<BlueReadMatchFeatureResult> ResultOfBlueReadMatchFeature = new List<BlueReadMatchFeatureResult>();
+            // JK-AddResultOFGreen-2023.07.12- Start
+            List<GreenHDMMatchAndViewResult> ResultOfGreenHDMMatchAndViewResult = new List<GreenHDMMatchAndViewResult>();
+            List<GreenFocusedMatchAndViewResult> ResultOfGreenFocusedMatchAndViewResult = new List<GreenFocusedMatchAndViewResult>();
+            List<GreenHDMQuickMatchAndViewResult> ResultOfGreenHDMQuickMatchAndViewResult = new List<GreenHDMQuickMatchAndViewResult>();
+            // JK-AddResultOFGreen-2023.07.12- End
+
+            // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+
+            List<string> RedHDMDetectedRegions = new List<string>(); // int
+            List<string> RedFocusedSupervisedDetectedRegions = new List<string>(); // int
+            List<string> RedFocusedUnsupervisedDetectedRegions = new List<string>(); // int
+
+            List<RedHDMRegionResult> ResultOfRedHDMRegionResult = new List<RedHDMRegionResult>();
+            List<RedFocusedSupervisedRegionResult> ResultOfRedFocusedSupervisedRegionResult = new List<RedFocusedSupervisedRegionResult>();
+            List<RedFocusedUnsupervisedRegionResult> ResultOFRedFocusedUnsupervisedRegionResult = new List<RedFocusedUnsupervisedRegionResult>();
+            // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
+
+
             Console.WriteLine($"\nStep 0. Preparation : Create Directory");
             string fBin = "Bin";
             string fCDLS = "Cognex Deep Learning Studio";
@@ -135,6 +344,11 @@ namespace QAGPTPJT
                 Console.WriteLine($" - Version: " + control.CLibraryVersion);
                 TestConfigurationList.Add($" - Version: " + control.CLibraryVersion.ToString());
 
+                // JK-Modified-2023.07.17 - Start
+                TestConfigurationItems.VPDLVers = control.CLibraryVersion.ToString(); // To add excel file name,                 
+                // JK-Modified-2023.07.17 - End
+
+
                 Console.WriteLine($"License Info.: ");
                 TestConfigurationList.Add($"License Info.: ");
                 Console.WriteLine($" - SerialNumber: " + control.License.SerialNumber);
@@ -154,10 +368,90 @@ namespace QAGPTPJT
                 //TestConfigurationList.Add(control.ComputeDevices[0].ToString());                               
                 //Console.WriteLine($"\n - checking test");
 
+                // JK-Modified-2023.07.17 - Start
+                Console.WriteLine($"Runtime Workspaces");
+                TestConfigurationList.Add($"Runtime Workspaces");
+
+                DirectoryInfo dirRuntimeworkspaceInfo = new DirectoryInfo(@"..\..\..\..\..\TestResource\Runtime\"); // refer to: //timeboxstory.tistory.com/107
+                foreach (FileInfo rwsFiles in dirRuntimeworkspaceInfo.GetFiles())
+                {
+                    Console.WriteLine(rwsFiles.Name);   // Console.WriteLine(rwsFiles.FullName);
+                    TestConfigurationList.Add($" - " + rwsFiles.Name);
+                }
+                Console.WriteLine($"Test Image files Info.");
+                TestConfigurationList.Add($"Test Image files Info.");
+
+                TestConfigurationList.Add($"Blue Locate");
+                DirectoryInfo dirBLImageInfo = new DirectoryInfo(@"..\..\..\..\..\TestResource\Images_BlueLocate\");
+                foreach (FileInfo imgBL in dirBLImageInfo.GetFiles())
+                {
+                    Console.WriteLine(imgBL.Name);
+                    TestConfigurationList.Add($" - " + imgBL.Name);
+                }
+                TestConfigurationList.Add($"Blue Read");
+                DirectoryInfo dirBRImageInfo = new DirectoryInfo(@"..\..\..\..\..\TestResource\Images_BlueRead\");
+                foreach (FileInfo imgBR in dirBRImageInfo.GetFiles())
+                {
+                    Console.WriteLine(imgBR.Name);
+                    TestConfigurationList.Add($" - " + imgBR.Name);
+                }
+                TestConfigurationList.Add($"Grenn HDM/Focused/HDM Quick");
+                DirectoryInfo dirGImageInfo = new DirectoryInfo(@"..\..\..\..\..\TestResource\Images_Green\");
+                foreach (FileInfo imgG in dirGImageInfo.GetFiles())
+                {
+                    Console.WriteLine(imgG.Name);
+                    TestConfigurationList.Add($" - " + imgG.Name);
+                }
+                TestConfigurationList.Add($"Red HDM/Focused Supervised/Focused Unsupervised");
+                DirectoryInfo dirRImageInfo = new DirectoryInfo(@"..\..\..\..\..\TestResource\Images_Red\");
+                foreach (FileInfo imgR in dirRImageInfo.GetFiles())
+                {
+                    Console.WriteLine(imgR.Name);
+                    TestConfigurationList.Add($" - " + imgR.Name);
+                }
+                // JK-Modified-2023.07.17 - Start
+
+
                 Stopwatch stopWatch = new Stopwatch();
 
                 // Blue Locate - Start // BlueLocate
                 Console.WriteLine($"\n - Blue Locate - Start");
+
+                // JK-AddResult-Start - 2023.07.06
+                // The number of features
+                // Feature Name and Score
+
+                // View Inspector - Feature
+                List<string> BlueLocateNumFeatures = new List<string>(); // int
+                List<string> BlueLocateFeaturesName = new List<string>(); // string
+                List<string> BlueLocateFeaturesScore = new List<string>(); // doublue
+                List<string> BlueLocateFeaturesPosX = new List<string>(); // doublue
+                List<string> BlueLocateFeaturesPosY = new List<string>(); // doublue
+                List<string> BlueLocateFeaturesAngle = new List<string>(); // doublue
+                List<string> BlueLocateFeaturesSizeHeight = new List<string>(); // dounle
+                List<string> BlueLocateFeaturesSizeWidth = new List<string>(); // double
+
+                // View Inspector - Node Model Match(es)
+                List<string> BlueLocareMatchModelName = new List<string>(); // string
+                List<string> BlueLocareMatchScore = new List<string>(); // double
+
+                // View Inspector - View Properties
+                List<string> BlueLocareViewHeight = new List<string>(); // double
+                List<string> BlueLocareViewWidth = new List<string>(); // double
+
+
+                List<string> FirstFeaturesName = new List<string>(); // string
+                List<string> FirstFeaturesScore = new List<string>(); // doublue
+                List<string> FirstFeaturesPosX = new List<string>(); // doublue
+                List<string> FirstFeaturesPosY = new List<string>(); // doublue
+
+                List<string> SecondFeaturesName = new List<string>(); // string
+                List<string> SecondFeaturesScore = new List<string>(); // doublue
+                List<string> SecondFeaturesPosX = new List<string>(); // doublue
+                List<string> SecondFeaturesPosY = new List<string>(); // doublue
+
+                // JK-AddResult-End - 2023.07.06
+
                 List<string> BlueLocateTimeList = new List<string>();
                 string pathRuntime_BlueLocate = "..\\..\\..\\..\\..\\TestResource\\Runtime\\6_BlueLocate.vrws";
                 Console.WriteLine(" - Runtime Path: {0}", pathRuntime_BlueLocate);// Index: control.ComputeDevices[0].Index.ToString()
@@ -185,6 +479,41 @@ namespace QAGPTPJT
                             sumBlueLocate += stopWatch.ElapsedMilliseconds;
                             BlueLocateTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResult-Start - 2023.07.06
+
+                            IBlueMarking blueMarking = sample.Markings[BlueLocateTool.Name] as IBlueMarking;
+                            foreach (IBlueView view in blueMarking.Views)
+                            {
+                                //Console.WriteLine("BlueLocate - Getting the result data of feautres : NumF/Name/Score/PosXY/Angle/Size");
+
+                                BlueLocateNumFeatures.Add(view.Features.Count.ToString()); // Add the number of features in List after getting a count of features.
+
+                                foreach (IFeature feature in view.Features) // The number of features is two.
+                                {
+                                    BlueLocateFeaturesName.Add(feature.Name);
+                                    BlueLocateFeaturesScore.Add(feature.Score.ToString());
+                                    BlueLocateFeaturesPosX.Add(feature.Position.X.ToString());
+                                    BlueLocateFeaturesPosY.Add(feature.Position.Y.ToString());
+                                    BlueLocateFeaturesAngle.Add(feature.Angle.ToString());
+                                    BlueLocateFeaturesSizeHeight.Add(feature.Size.Height.ToString());
+                                    BlueLocateFeaturesSizeWidth.Add(feature.Size.Width.ToString());
+
+                                    var test = feature.Size.Height.ToString();
+                                }
+                                foreach (IMatch match in view.Matches)
+                                {
+                                    BlueLocareMatchModelName.Add(match.ModelName);
+                                    BlueLocareMatchScore.Add(match.Score.ToString());
+                                }
+
+                                // View Inspector - View Properties
+                                BlueLocareViewHeight.Add(view.Size.Height.ToString());
+                                BlueLocareViewWidth.Add(view.Size.Width.ToString());
+                            }
+                            // JK-AddResult-End - 2023.07.06
+
+
                         }
                     }
                 }
@@ -192,8 +521,43 @@ namespace QAGPTPJT
                 Console.WriteLine(" - Processing Time Average({0} images): {1} [msec]", (int)countBlueLocate, avgBlueLocate);
                 // Blue Locate - End
 
+
                 // Blue Read - Start // BlueRead
                 Console.WriteLine($"\n - Blue Read - Start");
+
+                // JK Test - Start -  using Structure of List type : 2023.07.11
+                //List<BlueReadMatchFeatureResult> ResultOfBlueReadMatchFeature = new List<BlueReadMatchFeatureResult>();
+
+                // JK-AddResult- Start - 2023.07.11
+                // View Inspector - Feature
+                List<string> BlueReadNumFeatures = new List<string>(); // int
+                List<string> BlueReadFeaturesName = new List<string>(); // string
+                List<string> BlueReadFeaturesScore = new List<string>(); // doublue
+                List<string> BlueReadFeaturesPosX = new List<string>(); // doublue
+                List<string> BlueReadFeaturesPosY = new List<string>(); // doublue
+                List<string> BlueReadFeaturesAngle = new List<string>(); // doublue
+                List<string> BlueReadFeaturesSizeHeight = new List<string>(); // dounle
+                List<string> BlueReadFeaturesSizeWidth = new List<string>(); // double
+
+
+                // View Inspector - Model Match(es) + Matching result of each festures
+                List<string> BlueReadMatchModelName = new List<string>(); // string
+                List<string> BlueReadMatchScore = new List<string>(); // double
+
+                List<string> BlueReadMatchCountFeatures = new List<string>(); // int                
+                List<string> BlueReadMatchFetureString = new List<string>(); // string
+
+                List<string> BlueReadMatchFetureName = new List<string>(); // string
+                List<string> BlueReadMatchFeaturesScore = new List<string>(); // doublue
+                List<string> BlueReadMatchFeaturesPosX = new List<string>(); // doublue
+                List<string> BlueReadMatchFeaturesPosY = new List<string>(); // doublue
+                List<string> BlueReadMatchFeaturesAngle = new List<string>(); // doublue
+                List<string> BlueReadMatchFeaturesSizeHeight = new List<string>(); // dounle
+                List<string> BlueReadMatchFeaturesSizeWidth = new List<string>(); // double
+                // JK-AddResult-End - 2023.07.11
+
+
+
                 List<string> BlueReadTimeList = new List<string>();
                 string pathRuntime_BlueRead = "..\\..\\..\\..\\..\\TestResource\\Runtime\\7_BlueRead.vrws";
                 Console.WriteLine(" - Runtime Path: {0}", pathRuntime_BlueRead);// Index: control.ComputeDevices[0].Index.ToString()
@@ -221,6 +585,55 @@ namespace QAGPTPJT
                             sumBlueRead += stopWatch.ElapsedMilliseconds;
                             BlueReadTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResult- Start - 2023.07.11
+                            IBlueMarking blueMarking = sample.Markings[BlueReadTool.Name] as IBlueMarking;
+                            // JK Test - Start -  using Structure of List type : 2023.07.11
+                            //List<BlueReadMatchFeatureResult> ResultOfBlueReadMatchFeature = new List<BlueReadMatchFeatureResult>();
+                            //
+
+                            foreach (IBlueView view in blueMarking.Views)
+                            {
+                                BlueReadNumFeatures.Add(view.Features.Count.ToString());
+                                foreach (IFeature feature in view.Features)
+                                {
+                                    BlueReadFeaturesName.Add(feature.Name);
+                                    BlueReadFeaturesScore.Add(feature.Score.ToString());
+                                    BlueReadFeaturesPosX.Add(feature.Position.X.ToString());
+                                    BlueReadFeaturesPosY.Add(feature.Position.Y.ToString());
+                                    BlueReadFeaturesAngle.Add(feature.Angle.ToString());
+                                    BlueReadFeaturesSizeHeight.Add(feature.Size.Height.ToString());
+                                    BlueReadFeaturesSizeWidth.Add(feature.Size.Width.ToString());
+                                }
+                                foreach (IMatch match in view.Matches)
+                                {
+                                    //BlueReadMatchModelName.Add(match.ModelName);
+                                    //BlueReadMatchScore.Add(match.Score.ToString());
+                                    BlueReadMatchCountFeatures.Add(match.Features.Count.ToString());
+                                    BlueReadMatchFetureString.Add(match.FeatureString);
+                                    foreach (IFeature featureResultFromMatch in match.Features)
+                                    {
+                                        BlueReadMatchFetureName.Add(featureResultFromMatch.Name);
+                                        BlueReadMatchFeaturesScore.Add(featureResultFromMatch.Score.ToString());
+                                        BlueReadMatchFeaturesPosX.Add(featureResultFromMatch.Position.X.ToString());
+                                        BlueReadMatchFeaturesPosY.Add(featureResultFromMatch.Position.Y.ToString());
+                                        BlueReadMatchFeaturesAngle.Add(featureResultFromMatch.Angle.ToString());
+                                        BlueReadMatchFeaturesSizeHeight.Add(featureResultFromMatch.Size.Height.ToString());
+                                        BlueReadMatchFeaturesSizeWidth.Add(featureResultFromMatch.Size.Width.ToString());
+                                        // JK Test - Start -  using Structure of List type : 2023.07.11
+                                        ResultOfBlueReadMatchFeature.Add(new BlueReadMatchFeatureResult(
+                                            featureResultFromMatch.Name,
+                                            featureResultFromMatch.Score,
+                                            featureResultFromMatch.Position.X,
+                                            featureResultFromMatch.Position.Y,
+                                            featureResultFromMatch.Angle,
+                                            featureResultFromMatch.Size.Height,
+                                            featureResultFromMatch.Size.Width
+                                            ));
+                                    }
+                                }
+                            }
+                            // JK-AddResult- End - 2023.07.11
                         }
                     }
                 }
@@ -261,6 +674,41 @@ namespace QAGPTPJT
                             sumGreenHDM += stopWatch.ElapsedMilliseconds;
                             GreenHDMTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResultOFGreen-2023.07.12- Start
+                            IGreenMarking greenHDMMarking = sample.Markings[GreenHDMTool.Name] as IGreenMarking;
+
+                            foreach (IGreenView view in greenHDMMarking.Views)
+                            {
+                                ////Console.WriteLine("\n\r");
+                                //Console.WriteLine($"View Inspector - Marking Information");
+                                //foreach (ITag match in view.Tags) // view.tags[4] = A, B, C, D
+                                //{
+                                //    Console.WriteLine($"\t{match.Name}: {match.Score} [%]");
+                                //}
+                                //Console.WriteLine($"\t>> BestTag/Score: {view.BestTag.Name}/{view.BestTag.Score}");
+                                //Console.WriteLine($"\nView Inspector - View Properties");
+                                //Console.WriteLine($"\tHeight: {view.Size.Height}");
+                                //Console.WriteLine($"\tWidth: {view.Size.Width}");
+                                //Console.WriteLine($"\tPose: {view.Pose}");
+                                //Console.WriteLine($"\nView Inspector - Other imformation of View Properties");
+                                //Console.WriteLine($"\tThreshold: {view.Threshold}");
+                                //Console.WriteLine($"\tUncertainty: {view.Uncertainty}");
+                                //Console.WriteLine($"\tIsLabeled: {view.IsLabeled}");
+                                //Console.WriteLine($"\tBookmark: {view.Bookmark}");
+                                //Console.WriteLine($"\tHasMask: {view.HasMask}");
+
+                                ResultOfGreenHDMMatchAndViewResult.Add(new GreenHDMMatchAndViewResult(
+                                    view.BestTag.Name,
+                                    view.BestTag.Score,
+                                    view.Threshold,
+                                    view.Size.Height,
+                                    view.Size.Width
+                                    ));
+                            }
+                            // JK-AddResultOFGreen-2023.07.12- End
+
+
                         }
                     }
                 }
@@ -301,6 +749,21 @@ namespace QAGPTPJT
                             sumGreenFocused += stopWatch.ElapsedMilliseconds;
                             GreenFocusedTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResultOFGreen-2023.07.12- Start
+                            IGreenMarking greenFocusedMarking = sample.Markings[GreenFocusedTool.Name] as IGreenMarking;
+
+                            foreach (IGreenView view in greenFocusedMarking.Views)
+                            {
+                                ResultOfGreenFocusedMatchAndViewResult.Add(new GreenFocusedMatchAndViewResult(
+                                    view.BestTag.Name,
+                                    view.BestTag.Score,
+                                    view.Threshold,
+                                    view.Size.Height,
+                                    view.Size.Width
+                                    ));
+                            }
+                            // JK-AddResultOFGreen-2023.07.12- End        
                         }
                     }
                 }
@@ -338,6 +801,21 @@ namespace QAGPTPJT
                             sumGreenHDMQ += stopWatch.ElapsedMilliseconds;
                             GreenHDMQTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResultOFGreen-2023.07.12- Start
+                            IGreenMarking greenHDMQMarking = sample.Markings[GreenHDMQTool.Name] as IGreenMarking;
+
+                            foreach (IGreenView view in greenHDMQMarking.Views)
+                            {
+                                ResultOfGreenHDMQuickMatchAndViewResult.Add(new GreenHDMQuickMatchAndViewResult(
+                                    view.BestTag.Name,
+                                    view.BestTag.Score,
+                                    view.Threshold,
+                                    view.Size.Height,
+                                    view.Size.Width
+                                    ));
+                            }
+                            // JK-AddResultOFGreen-2023.07.12- End
                         }
                     }
                 }
@@ -375,6 +853,49 @@ namespace QAGPTPJT
                             sumRedHDM += stopWatch.ElapsedMilliseconds;
                             RedHDMTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+
+                            IRedMarking redHDMMarking = sample.Markings[RedHDMTool.Name] as IRedMarking;
+                            foreach (IRedView view in redHDMMarking.Views)
+                            {
+                                //Console.WriteLine($"\tDetected Regions: {view.Regions.Count}\n");
+                                RedHDMDetectedRegions.Add(view.Regions.Count.ToString());
+                                foreach (IRegion rhdmregion in view.Regions)
+                                {
+                                    //Console.WriteLine($"\tName: {region.Name}");
+                                    //Console.WriteLine($"\tScore: {region.Score}");
+                                    //Console.WriteLine($"\tArea: {region.Area}");
+                                    //Console.WriteLine($"\tX(Center): {region.Center.X}");
+                                    //Console.WriteLine($"\tY(Center): {region.Center.Y}");
+                                    //Console.WriteLine($"\tOuter Polygon: {region.Outer.Count}");
+                                    //Console.WriteLine($"\tInner Polygon: {region.Inners.Count}\n");
+
+                                    ResultOfRedHDMRegionResult.Add(new RedHDMRegionResult(
+                                        rhdmregion.Name,
+                                        rhdmregion.Score,
+                                        rhdmregion.Area,
+                                        rhdmregion.Center.X,
+                                        rhdmregion.Center.Y,
+                                        rhdmregion.Outer.Count,
+                                        rhdmregion.Inners.Count
+                                        ));
+                                }
+                                //Console.WriteLine($"View Inspector - View Properties");
+                                //Console.WriteLine($"\tHeight: {view.Size.Height}");
+                                //Console.WriteLine($"\tWidth: {view.Size.Width}");
+                                //Console.WriteLine($"\tPose: {view.Pose}");
+                                //Console.WriteLine($"\tHasmask: {view.HasMask}");
+                                //Console.WriteLine($"\nView Inspector - Other imformation of View Properties");
+                                //Console.WriteLine($"\tThreshold: {view.Threshold.Lower}");
+                                //Console.WriteLine($"\tThreshold: {view.Threshold.Upper}");
+                                //Console.WriteLine($"\tUncertainty: {view.Uncertainty}");
+                                //Console.WriteLine($"\tIsLabeled: {view.IsLabeled}");
+                                //Console.WriteLine($"\tBookmark: {view.Bookmark}");
+                            }
+
+                            // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
+
                         }
                     }
                 }
@@ -412,6 +933,27 @@ namespace QAGPTPJT
                             sumRedFSu += stopWatch.ElapsedMilliseconds;
                             RedFSuTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+                            IRedMarking redFSMarking = sample.Markings[RedFSuTool.Name] as IRedMarking;
+                            foreach (IRedView view in redFSMarking.Views)
+                            {
+                                RedFocusedSupervisedDetectedRegions.Add(view.Regions.Count.ToString());
+                                foreach (IRegion rfsregion in view.Regions)
+                                {
+                                    ResultOfRedFocusedSupervisedRegionResult.Add(new RedFocusedSupervisedRegionResult(
+                                        rfsregion.Name,
+                                        rfsregion.Score,
+                                        rfsregion.Area,
+                                        rfsregion.Center.X,
+                                        rfsregion.Center.Y,
+                                        rfsregion.Outer.Count,
+                                        rfsregion.Inners.Count
+                                        ));
+                                }
+                            }
+                            // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.                           
+
                         }
                     }
                 }
@@ -448,6 +990,26 @@ namespace QAGPTPJT
                             sumRedFUn += stopWatch.ElapsedMilliseconds;
                             RedFUnTimeList.Add(stopWatch.ElapsedMilliseconds.ToString());
                             stopWatch.Reset();
+
+                            // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+                            IRedMarking redFUMarking = sample.Markings[RedFUnTool.Name] as IRedMarking;
+                            foreach (IRedView view in redFUMarking.Views)
+                            {
+                                RedFocusedUnsupervisedDetectedRegions.Add(view.Regions.Count.ToString());
+                                foreach (IRegion rfuregion in view.Regions)
+                                {
+                                    ResultOFRedFocusedUnsupervisedRegionResult.Add(new RedFocusedUnsupervisedRegionResult(
+                                        rfuregion.Name,
+                                        rfuregion.Score,
+                                        rfuregion.Area,
+                                        rfuregion.Center.X,
+                                        rfuregion.Center.Y,
+                                        rfuregion.Outer.Count,
+                                        rfuregion.Inners.Count
+                                        ));
+                                }
+                            }
+                            // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
                         }
                     }
                 }
@@ -469,6 +1031,199 @@ namespace QAGPTPJT
                 var getResultListBlueLocate = new List<string>();
                 var getResultListBlueRead = new List<string>();
 
+                //JK-AddResult-Start - 2023.07.06
+                // Blue Locate - Feature's result
+                // View Inspector - Feature
+                var getBlueLocateNumFeatures = new List<string>();
+                // Odd number : Tail
+                var getBlueLocateFeaturesNameOddNum = new List<string>();
+                var getBlueLocateFeaturesScoreOddNum = new List<string>();
+                var getBlueLocateFeaturesPosXOddNum = new List<string>();
+                var getBlueLocateFeaturesPosYOddNum = new List<string>();
+                var getBlueLocateFeaturesAngleOddNum = new List<string>();
+                var getBlueLocateFeaturesSizeHeightOddNum = new List<string>();
+                var getBlueLocateFeaturesSizeWidthOddNum = new List<string>();
+                // Even number : Head                
+                var getBlueLocateFeaturesNameEvenNum = new List<string>();
+                var getBlueLocateFeaturesScoreEvenNum = new List<string>();
+                var getBlueLocateFeaturesPosXEvenNum = new List<string>();
+                var getBlueLocateFeaturesPosYEvenNum = new List<string>();
+                var getBlueLocateFeaturesAngleEvenNum = new List<string>();
+                var getBlueLocateFeaturesSizeHeightEvenNum = new List<string>();
+                var getBlueLocateFeaturesSizeWidthEvenNum = new List<string>();
+
+                // View Inspector - Node Model Match(es)
+                var getBlueLocareMatchModelName = new List<string>();
+                var getBlueLocareMatchScore = new List<string>();
+                // View Inspector - View Properties
+                var getBlueLocareViewHeight = new List<string>();
+                var getBlueLocareViewWidth = new List<string>();
+
+                for (int indexcount = 0; indexcount < Constants.RepeatProcess; indexcount++)
+                {
+                    getBlueLocateNumFeatures.Add(BlueLocateNumFeatures[indexcount].ToString());
+                    // View Inspector - Feature
+
+                    //getBlueLocateFeaturesName.Add(BlueLocateFeaturesName[indexcount].ToString());
+                    //getBlueLocateFeaturesScore.Add(BlueLocateFeaturesScore[indexcount].ToString());
+                    //getBlueLocateFeaturesPosX.Add(BlueLocateFeaturesPosX[indexcount].ToString());
+                    //getBlueLocateFeaturesPosY.Add(BlueLocateFeaturesPosY[indexcount].ToString());
+                    //getBlueLocateFeaturesAngle.Add(BlueLocateFeaturesAngle[indexcount].ToString());
+                    //getBlueLocateFeaturesSizeHeight.Add(BlueLocateFeaturesSizeHeight[indexcount].ToString());
+                    //getBlueLocateFeaturesSizeWidth.Add(BlueLocateFeaturesSizeWidth[indexcount].ToString());
+
+                    // View Inspector - Node Model Match(es)
+                    getBlueLocareMatchModelName.Add(BlueLocareMatchModelName[indexcount].ToString());
+                    getBlueLocareMatchScore.Add(BlueLocareMatchScore[indexcount].ToString());
+                    // View Inspector - View Properties
+                    getBlueLocareViewHeight.Add(BlueLocareViewHeight[indexcount].ToString());
+                    getBlueLocareViewWidth.Add(BlueLocareViewWidth[indexcount].ToString());
+                }
+                for (int indexcount = 0; indexcount < (Constants.RepeatProcess * 2); indexcount++)
+                {
+                    if ((indexcount % 2) == 0) // checking even number
+                    {
+                        getBlueLocateFeaturesNameEvenNum.Add(BlueLocateFeaturesName[indexcount].ToString());
+                        getBlueLocateFeaturesScoreEvenNum.Add(BlueLocateFeaturesScore[indexcount].ToString());
+                        getBlueLocateFeaturesPosXEvenNum.Add(BlueLocateFeaturesPosX[indexcount].ToString());
+                        getBlueLocateFeaturesPosYEvenNum.Add(BlueLocateFeaturesPosY[indexcount].ToString());
+                        getBlueLocateFeaturesAngleEvenNum.Add(BlueLocateFeaturesAngle[indexcount].ToString());
+                        getBlueLocateFeaturesSizeHeightEvenNum.Add(BlueLocateFeaturesSizeHeight[indexcount].ToString());
+                        getBlueLocateFeaturesSizeWidthEvenNum.Add(BlueLocateFeaturesSizeWidth[indexcount].ToString());
+                    }
+                    else // checking odd number
+                    {
+                        getBlueLocateFeaturesNameOddNum.Add(BlueLocateFeaturesName[indexcount].ToString());
+                        getBlueLocateFeaturesScoreOddNum.Add(BlueLocateFeaturesScore[indexcount].ToString());
+                        getBlueLocateFeaturesPosXOddNum.Add(BlueLocateFeaturesPosX[indexcount].ToString());
+                        getBlueLocateFeaturesPosYOddNum.Add(BlueLocateFeaturesPosY[indexcount].ToString());
+                        getBlueLocateFeaturesAngleOddNum.Add(BlueLocateFeaturesAngle[indexcount].ToString());
+                        getBlueLocateFeaturesSizeHeightOddNum.Add(BlueLocateFeaturesSizeHeight[indexcount].ToString());
+                        getBlueLocateFeaturesSizeWidthOddNum.Add(BlueLocateFeaturesSizeWidth[indexcount].ToString());
+                    }
+                }
+                Console.WriteLine("\nchecking result - list buffer");
+                //JK-AddResult- End - 2023.07.06 // Blue Locate
+
+
+                //JK-AddResult- Start - 2023.07.11 // Blue Read
+                // 아래 내용으로 저장괸 구조체 리스트에 Blue read 매칭 결과가 정상적으로 입력되었는지 확인함.
+
+                List<string> getBlueReadMatchCountFeatures = new List<string>();
+                for (int indexcount = 0; indexcount < Constants.RepeatProcess; indexcount++)
+                {
+                    getBlueReadMatchCountFeatures.Add(BlueReadMatchCountFeatures[indexcount].ToString());
+                }
+
+                List<BlueReadMatchFeatureResult> getBlueReadMatchReault = new List<BlueReadMatchFeatureResult>();
+                foreach (var mresult in ResultOfBlueReadMatchFeature) // m.blog.naver.com/vesmir/222442589978
+                {
+                    //Console.WriteLine($"\t\t\t Blue Read Matching results: {mresult.Name}, {mresult.Score}, {mresult.PosX}, {mresult.PosY}, {mresult.Angle}, {mresult.SizeHeight}, {mresult.SizeWidth} \n");                    
+                    getBlueReadMatchReault.Add(new BlueReadMatchFeatureResult(
+                        mresult.Name,
+                        mresult.Score,
+                        mresult.PosX,
+                        mresult.PosY,
+                        mresult.Angle,
+                        mresult.SizeHeight,
+                        mresult.SizeWidth
+                        ));
+                }
+                //JK-AddResult- End - 2023.07.11 // Blue Read
+
+                // JK-AddResultOFGreen-2023.07.12- Starat // Green HDM, Focused, HDM Quick
+                List<GreenHDMMatchAndViewResult> getGreenHDMMatchAndViewResult = new List<GreenHDMMatchAndViewResult>();
+                foreach (var ghdmviewresult in ResultOfGreenHDMMatchAndViewResult)
+                {
+                    getGreenHDMMatchAndViewResult.Add(new GreenHDMMatchAndViewResult(
+                        ghdmviewresult.BestTagName,
+                        ghdmviewresult.BestTagScore,
+                        ghdmviewresult.Threshold,
+                        ghdmviewresult.SizeHeight,
+                        ghdmviewresult.SizeWidth
+                        ));
+                }
+
+                List<GreenFocusedMatchAndViewResult> getGreenFocusedMatchAndViewResult = new List<GreenFocusedMatchAndViewResult>();
+                foreach (var gfviewresult in ResultOfGreenFocusedMatchAndViewResult)
+                {
+                    getGreenFocusedMatchAndViewResult.Add(new GreenFocusedMatchAndViewResult(
+                        gfviewresult.BestTagName,
+                        gfviewresult.BestTagScore,
+                        gfviewresult.Threshold,
+                        gfviewresult.SizeHeight,
+                        gfviewresult.SizeWidth
+                        ));
+                }
+
+                List<GreenHDMQuickMatchAndViewResult> getGreenHDMQuickMatchAndViewResult = new List<GreenHDMQuickMatchAndViewResult>();
+                foreach (var ghdmqresult in ResultOfGreenHDMQuickMatchAndViewResult)
+                {
+                    getGreenHDMQuickMatchAndViewResult.Add(new GreenHDMQuickMatchAndViewResult(
+                        ghdmqresult.BestTagName,
+                        ghdmqresult.BestTagScore,
+                        ghdmqresult.Threshold,
+                        ghdmqresult.SizeHeight,
+                        ghdmqresult.SizeWidth
+                        ));
+                }
+                // JK-AddResultOFGreen-2023.07.12- End // Green HDM, Focused, HDM Quick
+
+                // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+
+                List<string> getRedHDMDetectedRegions = new List<string>(); // int
+                List<string> getRedFocusedSupervisedDetectedRegions = new List<string>(); // int
+                List<string> getRedFocusedUnsupervisedDetectedRegions = new List<string>(); // int
+
+                for (int indexcount = 0; indexcount < Constants.RepeatProcess; indexcount++)
+                {
+                    getRedHDMDetectedRegions.Add(RedHDMDetectedRegions[indexcount].ToString());
+                    getRedFocusedSupervisedDetectedRegions.Add(RedFocusedSupervisedDetectedRegions[indexcount].ToString());
+                    getRedFocusedUnsupervisedDetectedRegions.Add(RedFocusedUnsupervisedDetectedRegions[indexcount].ToString());
+                }
+
+                List<RedHDMRegionResult> getRedHDMRegionResult = new List<RedHDMRegionResult>();
+                foreach (var rhdmresult in ResultOfRedHDMRegionResult)
+                {
+                    getRedHDMRegionResult.Add(new RedHDMRegionResult(
+                        rhdmresult.Name,
+                        rhdmresult.Score,
+                        rhdmresult.Area,
+                        rhdmresult.CenterX,
+                        rhdmresult.CenterY,
+                        rhdmresult.OuterCount,
+                        rhdmresult.InnerCount
+                        ));
+                }
+
+                List<RedFocusedSupervisedRegionResult> getRedFocusedSupervisedRegionResult = new List<RedFocusedSupervisedRegionResult>();
+                foreach (var rfsresult in ResultOfRedFocusedSupervisedRegionResult)
+                {
+                    getRedFocusedSupervisedRegionResult.Add(new RedFocusedSupervisedRegionResult(
+                        rfsresult.Name,
+                        rfsresult.Score,
+                        rfsresult.Area,
+                        rfsresult.CenterX,
+                        rfsresult.CenterY,
+                        rfsresult.OuterCount,
+                        rfsresult.InnerCount
+                        ));
+                }
+
+                List<RedFocusedUnsupervisedRegionResult> getRedFocusedUnsupervisedRegionResult = new List<RedFocusedUnsupervisedRegionResult>();
+                foreach (var rfuresult in ResultOFRedFocusedUnsupervisedRegionResult)
+                {
+                    getRedFocusedUnsupervisedRegionResult.Add(new RedFocusedUnsupervisedRegionResult(
+                        rfuresult.Name,
+                        rfuresult.Score,
+                        rfuresult.Area,
+                        rfuresult.CenterX,
+                        rfuresult.CenterY,
+                        rfuresult.OuterCount,
+                        rfuresult.InnerCount
+                        ));
+                }
+                // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
 
                 using (System.IO.StreamWriter resultFile = new System.IO.StreamWriter(@"..\..\..\..\..\TestResultCSV\" + csvFileName, true, System.Text.Encoding.GetEncoding("utf-8")))
                 {
@@ -493,11 +1248,70 @@ namespace QAGPTPJT
 
                 Console.WriteLine("\nStep 3. Save resultin Excel file");
                 string getDateInfo = DateTime.Now.ToString("yyyy-MM-dd"); // refer to //www.delftstack.com/ko/howto/csharp/how-to-get-the-current-date-without-time-in-csharp/
-                string strExcelFileName = "QAGetProcessingTime_" + getDateInfo + ".xlsx";
+                string strExcelFileName = "QAGetProcessingTime_VPDL_" + TestConfigurationItems.VPDLVers + "_" + getDateInfo + ".xlsx";
                 string strExcelFileDirectory = Path.GetFullPath(@"..\..\..\..\..\TestResultCSV\") + strExcelFileName;   // Refer to - Processing file path name in using C# : //myoung-min.tistory.com/45
                 Console.WriteLine(strExcelFileDirectory);
 
-                ExcelDataEPPlusRedTools(getResultListRedHDM, getResultListRedFSu, getResultListRedFUn, getResultListGreenHDM, getResultListGreenFocused, getResultListGreenHDMQucik, getResultListBlueLocate, getResultListBlueRead, strExcelFileDirectory); // Adding Green HDM Tool in the create epplus excel  - 20230508
+                // This under line is the existance before 2023.07.06
+                //ExcelDataEPPlusRedTools(getResultListRedHDM, getResultListRedFSu, getResultListRedFUn, getResultListGreenHDM, getResultListGreenFocused, getResultListGreenHDMQucik, getResultListBlueLocate, getResultListBlueRead, strExcelFileDirectory); // Adding Green HDM Tool in the create epplus excel  - 20230508
+
+                // JK-AddResult-Start - 2023.07.06
+                ExcelDataEPPlusRedTools(
+                    getResultListRedHDM,
+                    getResultListRedFSu,
+                    getResultListRedFUn,
+                    getResultListGreenHDM,
+                    getResultListGreenFocused,
+                    getResultListGreenHDMQucik,
+                    getResultListBlueLocate,
+
+                    //JK-AddResult-Start - 2023.07.06                                       
+                    getBlueLocateNumFeatures,
+                    getBlueLocareMatchModelName,
+                    getBlueLocareMatchScore,
+                    getBlueLocareViewHeight,
+                    getBlueLocareViewWidth,
+
+                    getBlueLocateFeaturesNameEvenNum,
+                    getBlueLocateFeaturesScoreEvenNum,
+                    getBlueLocateFeaturesPosXEvenNum,
+                    getBlueLocateFeaturesPosYEvenNum,
+                    getBlueLocateFeaturesAngleEvenNum,
+                    getBlueLocateFeaturesSizeHeightEvenNum,
+                    getBlueLocateFeaturesSizeWidthEvenNum,
+
+                    getBlueLocateFeaturesNameOddNum,
+                    getBlueLocateFeaturesScoreOddNum,
+                    getBlueLocateFeaturesPosXOddNum,
+                    getBlueLocateFeaturesPosYOddNum,
+                    getBlueLocateFeaturesAngleOddNum,
+                    getBlueLocateFeaturesSizeHeightOddNum,
+                    getBlueLocateFeaturesSizeWidthOddNum,
+                    //JK-AddResult-End - 2023.07.06
+
+                    //JK-AddResult-Start - 2023.07.11
+                    getBlueReadMatchCountFeatures,
+                    getBlueReadMatchReault,
+                    //JK-AddResult-End - 2023.07.11
+
+                    // JK-AddResultOFGreen-2023.07.12- Start // Green HDM, Focused, HDM Quick
+                    getGreenHDMMatchAndViewResult,
+                    getGreenFocusedMatchAndViewResult,
+                    getGreenHDMQuickMatchAndViewResult,
+                    // JK-AddResultOFGreen-2023.07.12- End // Green HDM, Focused, HDM Quick
+
+                    // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+                    getRedHDMDetectedRegions,
+                    getRedFocusedSupervisedDetectedRegions,
+                    getRedFocusedUnsupervisedDetectedRegions,
+                    getRedHDMRegionResult,
+                    getRedFocusedSupervisedRegionResult,
+                    getRedFocusedUnsupervisedRegionResult,
+                    // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+
+                    getResultListBlueRead,
+                    strExcelFileDirectory
+                    ); // Adding Green HDM Tool in the create epplus excel  - 20230508
 
                 TestConfiguration(TestConfigurationList, strExcelFileDirectory); // saving test configuration
 
@@ -512,6 +1326,53 @@ namespace QAGPTPJT
             {
                 // Create TestPC's Configuration sheet
                 ExcelWorksheet worksheet = excelPackage.Workbook.Worksheets.Add("TestConfiguration");
+
+                // JK-Modified-2023.07.17 - Start
+
+                using (ExcelRange Rng = worksheet.Cells[1, 1, 39, 1]) // PC OS Info.
+                {
+                    Rng.Style.Font.Italic = true;
+                }
+                using (ExcelRange Rng = worksheet.Cells[1, 1, 1, 1]) // PC OS Info.
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+
+                using (ExcelRange Rng = worksheet.Cells[4, 1, 4, 1]) // GUI Info.
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+
+                using (ExcelRange Rng = worksheet.Cells[11, 1, 11, 1]) // VPDL Info.
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+                using (ExcelRange Rng = worksheet.Cells[13, 1, 13, 1]) // License Info.
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+                using (ExcelRange Rng = worksheet.Cells[22, 1, 22, 1]) // Runtime workspaces
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+                using (ExcelRange Rng = worksheet.Cells[31, 1, 31, 1]) // Test Image files Info.
+                {
+                    Rng.Style.Font.Size = 11;
+                    Rng.Style.Font.Bold = true;
+                    Rng.Style.Font.Italic = false;
+                }
+                // JK-Modified-2023.07.17 - End
+
                 // Fill in the system's information
                 int col = 1;
                 for (int row = 1; row < getTestConfigurationList.Count; row++)
@@ -520,7 +1381,62 @@ namespace QAGPTPJT
             }
         }
 
-        private static void ExcelDataEPPlusRedTools(List<string> GetPTimesRedHDM, List<string> GetPTimesRedFSu, List<string> GetPTimesRedFUn, List<string> GetPTimesGreenHDM, List<string> GetPTimesGreenFocused, List<string> GetPTimesGreenHDMQuick, List<string> GetPTimesBlueLocate, List<string> GetPTimesBlueRead, string savePath)
+        private static void ExcelDataEPPlusRedTools(
+            List<string> GetPTimesRedHDM,
+            List<string> GetPTimesRedFSu,
+            List<string> GetPTimesRedFUn,
+            List<string> GetPTimesGreenHDM,
+            List<string> GetPTimesGreenFocused,
+            List<string> GetPTimesGreenHDMQuick,
+            List<string> GetPTimesBlueLocate,
+
+            //JK-AddResult-Start - 2023.07.06
+            List<string> GetBlueLocateNumFeatures,
+            List<string> GetBlueLocareMatchModelName,
+            List<string> GetBlueLocareMatchScore,
+            List<string> GetBlueLocareViewHeight,
+            List<string> GetBlueLocareViewWidth,
+
+            List<string> GetBlueLocateFeaturesNameEvenNum,
+            List<string> GetBlueLocateFeaturesScoreEvenNum,
+            List<string> GetBlueLocateFeaturesPosXEvenNum,
+            List<string> GetBlueLocateFeaturesPosYEvenNum,
+            List<string> GetBlueLocateFeaturesAngleEvenNum,
+            List<string> GetBlueLocateFeaturesSizeHeightEvenNum,
+            List<string> GetBlueLocateFeaturesSizeWidthEvenNum,
+
+            List<string> GetBlueLocateFeaturesNameOddNum,
+            List<string> GetBlueLocateFeaturesScoreOddNum,
+            List<string> GetBlueLocateFeaturesPosXOddNum,
+            List<string> GetBlueLocateFeaturesPosYOddNum,
+            List<string> GetBlueLocateFeaturesAngleOddNum,
+            List<string> GetBlueLocateFeaturesSizeHeightOddNum,
+            List<string> GetBlueLocateFeaturesSizeWidthOddNum,
+            //JK-AddResult-End - 2023.07.06
+
+            //JK-AddResult-Start - 2023.07.11
+            List<string> GetBlueReadMatchCountFeatures,
+            List<BlueReadMatchFeatureResult> GetBlueReadMatchReault,
+            //JK-AddResult-End - 2023.07.11
+
+            // JK-AddResultOFGreen-2023.07.12- Start // Green HDM, Focused, HDM Quick
+            List<GreenHDMMatchAndViewResult> GetGreenHDMMatchAndViewResult,
+            List<GreenFocusedMatchAndViewResult> GetGreenFocusedMatchAndViewResult,
+            List<GreenHDMQuickMatchAndViewResult> GetGreenHDMQuickMatchAndViewResult,
+            // JK-AddResultOFGreen-2023.07.12- End // Green HDM, Focused, HDM Quick
+
+            // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+            List<string> GetRedHDMDetectedRegions,
+            List<string> GetRedFocusedSupervisedDetectedRegions,
+            List<string> GetRedFocusedUnsupervisedDetectedRegions,
+
+            List<RedHDMRegionResult> GetRedHDMRegionResult,
+            List<RedFocusedSupervisedRegionResult> GetRedFocusedSupervisedRegionResult,
+            List<RedFocusedUnsupervisedRegionResult> GetRedFocusedUnsupervisedRegionResult,
+            // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
+
+            List<string> GetPTimesBlueRead,
+            string savePath)
         {
             Console.WriteLine("JK Test 1. Create Excel File");
             ExcelPackage ExcelPkg = new ExcelPackage();
@@ -534,7 +1450,8 @@ namespace QAGPTPJT
                 Rng.Style.Font.Bold = true;
                 Rng.Style.Font.Italic = true;
                 Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217)); // Color is gray
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(238, 46, 34));
                 Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             }
             using (ExcelRange Rng = wsSheetRed.Cells[2, 1, 2, 1])
@@ -569,6 +1486,7 @@ namespace QAGPTPJT
                 Rng.Style.Font.Italic = true;
                 Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                 Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(238, 46, 34));
                 Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             }
             using (ExcelRange Rng = wsSheetRed.Cells[1, 3, 1, 3])
@@ -579,6 +1497,7 @@ namespace QAGPTPJT
                 Rng.Style.Font.Italic = true;
                 Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                 Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(238, 46, 34));
                 Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             }
             using (ExcelRange Rng = wsSheetRed.Cells[1, 4, 1, 4])
@@ -589,8 +1508,257 @@ namespace QAGPTPJT
                 Rng.Style.Font.Italic = true;
                 Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                 Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(238, 46, 34));
                 Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             }
+
+            // JK - 2023.07.12 - Start
+
+            // Red HMD
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 5, 1, 5])
+            {
+                Rng.Value = "RHDMDetect";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 6, 1, 6])
+            {
+                Rng.Value = "RHDMName1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 7, 1, 7])
+            {
+                Rng.Value = "RHDMScore1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 8, 1, 8])
+            {
+                Rng.Value = "RHDMName2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 9, 1, 9])
+            {
+                Rng.Value = "RHDMScore2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            // JK-ModifyCodeRedHDM-2023.07.13- Start >>> In case of using Red HDM runtime, The number of defect regions is therr. So, Need to add result cell of third region.
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 10, 1, 10])
+            {
+                Rng.Value = "RHDMName2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 11, 1, 11])
+            {
+                Rng.Value = "RHDMScore2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            // JK-ModifyCodeRedHDM-2023.07.13- Start
+
+            //using (ExcelRange Rng = wsSheetRed.Cells[1, 10, 1, 10])
+            //{
+            //    Rng.Value = "RHDMThreshold";
+            //    Rng.Style.Font.Size = 11;
+            //    Rng.Style.Font.Bold = true;
+            //    Rng.Style.Font.Italic = true;
+            //    Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            //    //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+            //    Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 60, 60));
+            //    Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            //}
+
+            // Red Focused Supervised
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 12, 1, 12])
+            {
+                Rng.Value = "RFSDetect";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 100, 100));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 13, 1, 13])
+            {
+                Rng.Value = "RFSName1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 100, 100));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 14, 1, 14])
+            {
+                Rng.Value = "RFSScore1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 100, 100));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 15, 1, 15])
+            {
+                Rng.Value = "RFSName2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 100, 100));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 16, 1, 16])
+            {
+                Rng.Value = "RFSScore2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 100, 100));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            //using (ExcelRange Rng = wsSheetRed.Cells[1, 16, 1, 16])
+            //{
+            //    Rng.Value = "RFSThreshold";
+            //    Rng.Style.Font.Size = 11;
+            //    Rng.Style.Font.Bold = true;
+            //    Rng.Style.Font.Italic = true;
+            //    Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            //    //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+            //    Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 100, 100));
+            //    Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            //}
+
+            // Red Focused Unsupervised
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 17, 1, 17])
+            {
+                Rng.Value = "RFUDetect";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 160, 160));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 18, 1, 18])
+            {
+                Rng.Value = "RFUName1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 160, 160));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 19, 1, 19])
+            {
+                Rng.Value = "RFUScore1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 160, 160));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 20, 1, 20])
+            {
+                Rng.Value = "RFUName2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 160, 160));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 21, 1, 21])
+            {
+                Rng.Value = "RFUScore2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 160, 160));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            //using (ExcelRange Rng = wsSheetRed.Cells[1, 20, 1, 20])
+            //{
+            //    Rng.Value = "RFUThreshold";
+            //    Rng.Style.Font.Size = 11;
+            //    Rng.Style.Font.Bold = true;
+            //    Rng.Style.Font.Italic = true;
+            //    Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            //    //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+            //    Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 160, 160));
+            //    Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            //}
+
+            int REndRow = (Constants.RepeatProcess + 4); // '4' means 'repeat+max+min+avrg'
+            int REndColumn = 4 + (6 + 6 + 4); // Repeat, Red HDM, Red FSu, Red FUn, RHDMDetect, RHDMName1, RHDMScore1, RHDMName2, RHDMScore2, RHDMThreshold, RFSDetect, RFSName1, RFSScore, 1RFSName2, RFSScore2, RFSThreshold, RFUDetect, RFUName1, RFUScore1, RFUThreshold
+
+            using (ExcelRange Rng = wsSheetRed.Cells[1, 1, REndRow, REndColumn])
+            {
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            // JK - 2023.07.12 - End
+
+            using (ExcelRange Rng = wsSheetRed.Cells[2, 4, 2, 4])
+            {
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
             wsSheetRed.Protection.IsProtected = false;
             wsSheetRed.Protection.AllowSelectLockedCells = false;
             // Red - End
@@ -662,8 +1830,86 @@ namespace QAGPTPJT
                 Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
                 Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             }
-            wsSheetGreen.Protection.IsProtected = false;
-            wsSheetGreen.Protection.AllowSelectLockedCells = false;
+
+            // JK - 2023.07.12 - Start
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 5, 1, 5])
+            {
+                Rng.Value = "GHDMBestTag";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(16, 203, 34));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 6, 1, 6])
+            {
+                Rng.Value = "GHDMScore";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(16, 203, 34));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 7, 1, 7])
+            {
+                Rng.Value = "GFBestTag";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(38, 238, 58));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 8, 1, 8])
+            {
+                Rng.Value = "GFScore";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(38, 238, 58));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 9, 1, 9])
+            {
+                Rng.Value = "GHDMQBestTag";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(128, 255, 128));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 10, 1, 10])
+            {
+                Rng.Value = "GHDMQScore";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(128, 255, 128));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            int GEndRow = (Constants.RepeatProcess + 4); // '4' means 'repeat+max+min+avrg'
+            int GEndColumn = (2 * 3) + 4;
+            using (ExcelRange Rng = wsSheetGreen.Cells[1, 1, GEndRow, GEndColumn])
+            {
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            // JK - 2023.07.12 - End
+
+
+            //using (ExcelRange Rng = wsSheetGreen.Cells[2, 4, 2, 4])
+            //{
+            //    Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            //}
+
+            //wsSheetGreen.Protection.IsProtected = false;
+            //wsSheetGreen.Protection.AllowSelectLockedCells = false;
             // Green - End
 
             // Blue Locate - Start //GetPTimesBlueLocate
@@ -705,7 +1951,7 @@ namespace QAGPTPJT
             }
             using (ExcelRange Rng = wsSheetBlueL.Cells[1, 2, 1, 2])
             {
-                Rng.Value = "Blue Locate";
+                Rng.Value = "BL_PTime";
                 Rng.Style.Font.Size = 11;
                 Rng.Style.Font.Bold = true;
                 Rng.Style.Font.Italic = true;
@@ -713,9 +1959,220 @@ namespace QAGPTPJT
                 Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
                 Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             }
+
+            //JK-AddResult-Start- 2023.07.06
+
+            //using (ExcelRange Rng = wsSheetBlueL.Cells[1, 3, 1, 3])
+            //{
+            //    Rng.Value = "Features";
+            //    Rng.Style.Font.Size = 11;
+            //    Rng.Style.Font.Bold = true;
+            //    Rng.Style.Font.Italic = true;
+            //    Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            //    Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+            //    Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            //}
+            // Total items - Blue Locate result
+            // Odd Number : Tail
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 3, 1, 3])
+            {
+                Rng.Value = "Features";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 120, 200));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 125, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 4, 1, 4])
+            {
+                Rng.Value = "FName1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 5, 1, 5])
+            {
+                Rng.Value = "FScore1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 6, 1, 6])
+            {
+                Rng.Value = "FPosX1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 7, 1, 7])
+            {
+                Rng.Value = "FPosY1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 8, 1, 8])
+            {
+                Rng.Value = "FAngle1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 9, 1, 9])
+            {
+                Rng.Value = "FSizeH1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 10, 1, 10])
+            {
+                Rng.Value = "FSizeW1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 145, 255));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            // Even Number : Head
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 11, 1, 11])
+            {
+                Rng.Value = "FName2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 12, 1, 12])
+            {
+                Rng.Value = "FScore2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 13, 1, 13])
+            {
+                Rng.Value = "FPosX2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 14, 1, 14])
+            {
+                Rng.Value = "FPosY2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 15, 1, 15])
+            {
+                Rng.Value = "FAngle2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 16, 1, 16])
+            {
+                Rng.Value = "FSizeH2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 17, 1, 17])
+            {
+                Rng.Value = "FSizeW2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(60, 170, 220));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+
+
+            int BLEndRow = (Constants.RepeatProcess + 4); // '4' means 'repeat+max+min+avrg'
+            int BLEndColumn = (7 * 2) + 3;
+            using (ExcelRange Rng = wsSheetBlueL.Cells[1, 1, BLEndRow, BLEndColumn])
+            {
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            //JK-AddResult-End - 2023.07.06
+
             wsSheetBlueL.Protection.IsProtected = false;
             wsSheetBlueL.Protection.AllowSelectLockedCells = false;
             // Blue Locate - End
+
 
             // Blue Read - Start
             ExcelWorksheet wsSheetBlueR = ExcelPkg.Workbook.Worksheets.Add("BlueReadTool");
@@ -766,7 +2223,241 @@ namespace QAGPTPJT
             }
             wsSheetBlueR.Protection.IsProtected = false;
             wsSheetBlueR.Protection.AllowSelectLockedCells = false;
+
+            //JK-AddResult-Start - 2023.07.11
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 3, 1, 3])
+            {
+                Rng.Value = "Features";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217)); // Color is gray
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 75, 163));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 4, 1, 4])
+            {
+                Rng.Value = "FName1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                //Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(217, 217, 217));
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 5, 1, 5])
+            {
+                Rng.Value = "FScore1";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 6, 1, 6])
+            {
+                Rng.Value = "FName2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 7, 1, 7])
+            {
+                Rng.Value = "FScore2";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 8, 1, 8])
+            {
+                Rng.Value = "FName3";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 9, 1, 9])
+            {
+                Rng.Value = "FScore3";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 10, 1, 10])
+            {
+                Rng.Value = "FName4";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 11, 1, 11])
+            {
+                Rng.Value = "FScore4";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 12, 1, 12])
+            {
+                Rng.Value = "FName5";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 13, 1, 13])
+            {
+                Rng.Value = "FScore5";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 14, 1, 14])
+            {
+                Rng.Value = "FName6";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 15, 1, 15])
+            {
+                Rng.Value = "FScore6";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 16, 1, 16])
+            {
+                Rng.Value = "FName7";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 17, 1, 17])
+            {
+                Rng.Value = "FScore7";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 18, 1, 18])
+            {
+                Rng.Value = "FName8";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 19, 1, 19])
+            {
+                Rng.Value = "FScore8";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 20, 1, 20])
+            {
+                Rng.Value = "FName9";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 21, 1, 21])
+            {
+                Rng.Value = "FScore9";
+                Rng.Style.Font.Size = 11;
+                Rng.Style.Font.Bold = true;
+                Rng.Style.Font.Italic = true;
+                Rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                Rng.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 95, 210));
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                Rng.Style.Font.Color.SetColor(Color.FromArgb(255, 255, 255));
+            }
+
+            int BRcountFeatures = int.Parse(GetBlueReadMatchCountFeatures.ElementAt(0)); //GetBlueReadMatchCountFeatures 값은 Read 처리시 검출된 feature 수.
+            int BREndRow = (Constants.RepeatProcess + 4); // '4' means 'repeat+max+min+avrg'
+            int BREndColumn = (BRcountFeatures * 2) + 3;
+            using (ExcelRange Rng = wsSheetBlueR.Cells[1, 1, BREndRow, BREndColumn])
+            {
+                Rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            //JK-AddResult-End - 2023.07.11
             // Blue Read - End
+
             ExcelPkg.SaveAs(new FileInfo(@savePath));
             Console.WriteLine(" - Complete the creating excel file!");
 
@@ -798,6 +2489,82 @@ namespace QAGPTPJT
                 colRedTools = 4;        // Red Focused Unsupervised
                 for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
                     worksheetRedTools.Cells[row, colRedTools].Value = int.Parse(GetPTimesRedFUn[row - startCellindex]);
+
+                // JK-AddResultOFRed-2023.07.12- Start // Red HDM, Focused Supervised, Focused Unsupervised.
+                // Red HDM
+                colRedTools = 5;        // Red HDM - Defect regions
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = int.Parse(GetRedHDMDetectedRegions[row - startCellindex]);
+                colRedTools = 6;        // Red HDM - Defect Name1
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 3) + 0)].Name;
+                colRedTools = 7;        // Red HDM - Defect Score1
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 3) + 0)].Score;
+                colRedTools = 8;        // Red HDM - Defect Name2
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 3) + 1)].Name;
+                colRedTools = 9;        // Red HDM - Defect Score2
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 3) + 1)].Score;
+
+                // JK-ModifyCodeRedHDM-2023.07.13- Start
+                colRedTools = 10;        // Red HDM - Defect Name3
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 3) + 2)].Name;
+                colRedTools = 11;        // Red HDM - Defect Score3
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 3) + 2)].Score;
+
+                // JK-ModifyCodeRedHDM-2023.07.13- End
+
+                //colRedTools = 10;        // Red HDM - Threshold
+                //for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                //    //worksheetRedTools.Cells[row, colRedTools].Value = GetRedHDMRegionResult[(((row - startCellindex) * 2) + 1)].Score;
+
+                // Red Focused Supervised
+                colRedTools = 12;        // Red Focused Supervised - Defect regions
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = int.Parse(GetRedFocusedSupervisedDetectedRegions[row - startCellindex]);
+                colRedTools = 13;        // Red Focused Supervised - Defect Name1
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedSupervisedRegionResult[(((row - startCellindex) * 2) + 0)].Name;
+                colRedTools = 14;        // Red Focused Supervised - Defect Score1
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedSupervisedRegionResult[(((row - startCellindex) * 2) + 0)].Score;
+                colRedTools = 15;        // Red Focused Supervised - Defect Name2
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedSupervisedRegionResult[(((row - startCellindex) * 2) + 1)].Name;
+                colRedTools = 16;        // Red Focused Supervised - Defect Score2
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedSupervisedRegionResult[(((row - startCellindex) * 2) + 1)].Score;
+                //colRedTools = 15;        // Red Focused Supervised - Threashold
+                //for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                //    //worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedSupervisedRegionResult[(((row - startCellindex) * 2) + 1)].Score;
+
+                // Red Focused Unsupervised
+                colRedTools = 17;        // Red Focused Unsupervised - Defect regions
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = int.Parse(GetRedFocusedUnsupervisedDetectedRegions[row - startCellindex]);
+                colRedTools = 18;        // Red Focused Unsupervised - Defect Name1
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedUnsupervisedRegionResult[(((row - startCellindex) * 2) + 0)].Name;
+                colRedTools = 19;        // Red Focused Unsupervised - Defect Score1
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedUnsupervisedRegionResult[(((row - startCellindex) * 2) + 0)].Score;
+                colRedTools = 20;        // Red Focused Unsupervised - Defect Name2
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedUnsupervisedRegionResult[(((row - startCellindex) * 2) + 1)].Name;
+                colRedTools = 21;        // Red Focused Unsupervised - Defect Score2
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedUnsupervisedRegionResult[(((row - startCellindex) * 2) + 1)].Score;
+                //colRedTools = 20;        // Red Focused Unsupervised - Threashold
+                //for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                //    //worksheetRedTools.Cells[row, colRedTools].Value = GetRedFocusedSupervisedRegionResult[(((row - startCellindex) * 2) + 1)].Score;
+
+                // JK-AddResultOFRed-2023.07.12- End // Red HDM, Focused Supervised, Focused Unsupervised.
+
+
                 // Fill in max, min , average for analysing process time each red tools.                
                 worksheetRedTools.Cells["B2"].Formula = $"MAX(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";        // Red HDM : maximum
                 worksheetRedTools.Cells["B3"].Formula = $"MIN(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";        // Red HDM : minimum                
@@ -814,7 +2581,7 @@ namespace QAGPTPJT
                 chartRedTools.Title.Font.Size = 14; //chartRedTools.Title.Font.Color = Color.FromArgb(238, 46, 34);
                 chartRedTools.Title.Font.Bold = true;
                 chartRedTools.Title.Font.Italic = true;
-                chartRedTools.SetPosition(1, 1, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
+                chartRedTools.SetPosition(7, 7, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
                 chartRedTools.SetSize(800, 600);
 
                 ExcelAddress valueAddress_Data1_RedTools = new ExcelAddress(startCellindex, 2, (Constants.RepeatProcess + (startCellindex - 1)), 2);
@@ -858,6 +2625,40 @@ namespace QAGPTPJT
                 colGreenTools = 4;        // Green HDM Quick
                 for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
                     worksheetGreenTools.Cells[row, colGreenTools].Value = int.Parse(GetPTimesGreenHDMQuick[row - startCellindex]);
+
+                // JK-AddResultOFGreen-2023.07.12- Start // Green HDM, Focused, HDM Quick
+                // Green HDM
+                colGreenTools = 5;        // Green HDM - BestTag.Name
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMMatchAndViewResult[(row - startCellindex)].BestTagName;
+                colGreenTools = 6;        // Green HDM - BestTag.Score
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMMatchAndViewResult[(row - startCellindex)].BestTagScore;
+                //colGreenTools = 7;        // Green HDM - Threshold
+                //for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)                    
+                //    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMMatchAndViewResult[(row - startCellindex)].Threshold;
+                //colGreenTools = 8;        // Green HDM - Size.Height
+                //for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)                    
+                //    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMMatchAndViewResult[(row - startCellindex)].SizeHeight;
+                //colGreenTools = 9;        // Green HDM - Size.Width
+                //for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                //    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMMatchAndViewResult[(row - startCellindex)].SizeWidth;
+
+                colGreenTools = 7;        // Green Focused - BestTag.Name
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenFocusedMatchAndViewResult[(row - startCellindex)].BestTagName;
+                colGreenTools = 8;        // Green Focused - BestTag.Score
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenFocusedMatchAndViewResult[(row - startCellindex)].BestTagScore;
+
+                colGreenTools = 9;        // Green HDM Quick - BestTag.Name
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMQuickMatchAndViewResult[(row - startCellindex)].BestTagName;
+                colGreenTools = 10;        // Green HDM Quick - BestTag.Score
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetGreenTools.Cells[row, colGreenTools].Value = GetGreenHDMQuickMatchAndViewResult[(row - startCellindex)].BestTagScore;
+                // JK-AddResultOFGreen-2023.07.12- End // Green HDM, Focused, HDM Quick
+
                 // Fill in max, min, average for analysing process time each green tools.
                 worksheetGreenTools.Cells["B2"].Formula = $"MAX(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";
                 worksheetGreenTools.Cells["B3"].Formula = $"MIN(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";
@@ -874,7 +2675,7 @@ namespace QAGPTPJT
                 chartGreenTools.Title.Font.Size = 14;
                 chartGreenTools.Title.Font.Bold = true;
                 chartGreenTools.Title.Font.Italic = true;
-                chartGreenTools.SetPosition(1, 1, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
+                chartGreenTools.SetPosition(7, 7, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
                 chartGreenTools.SetSize(800, 600);
 
                 ExcelAddress valueAddress_Data1_GreenTools = new ExcelAddress(startCellindex, 2, (Constants.RepeatProcess + (startCellindex - 1)), 2);
@@ -908,7 +2709,62 @@ namespace QAGPTPJT
 
                 int colBlueLocateTool = 2;
                 for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
-                    worksheetBlueLocateTool.Cells[row, colBlueLocateTool].Value = int.Parse(GetPTimesBlueLocate[row - startCellindex]);
+                    //worksheetBlueLocateTool.Cells[row, colBlueLocateTool].Value = int.Parse(GetPTimesBlueLocate[row - startCellindex]);
+                    worksheetBlueLocateTool.Cells[row, colBlueLocateTool].Value = double.Parse(GetPTimesBlueLocate[row - startCellindex]);
+
+                //JK-AddResult-Start - 2023.07.06
+                int colBLFeatures = 3;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFeatures].Value = int.Parse(GetBlueLocateNumFeatures[row - startCellindex]);
+
+                // EvenNum : Tail
+                int colBLFName1 = 4;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFName1].Value = GetBlueLocateFeaturesNameEvenNum[row - startCellindex]; // First feature name is string type 
+                int colBLFScore1 = 5;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFScore1].Value = double.Parse(GetBlueLocateFeaturesScoreEvenNum[row - startCellindex]);
+                int colBLFPosX1 = 6;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFPosX1].Value = double.Parse(GetBlueLocateFeaturesPosXEvenNum[row - startCellindex]); // double
+
+                int colBLFPosY1 = 7;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFPosY1].Value = double.Parse(GetBlueLocateFeaturesPosYEvenNum[row - startCellindex]);
+                int colBLFAngle1 = 8;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFAngle1].Value = double.Parse(GetBlueLocateFeaturesAngleEvenNum[row - startCellindex]);
+                int colBLFSizeH1 = 9;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFSizeH1].Value = int.Parse(GetBlueLocateFeaturesSizeHeightEvenNum[row - startCellindex]);
+                int colBLFSizeW1 = 10;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFSizeW1].Value = int.Parse(GetBlueLocateFeaturesSizeWidthEvenNum[row - startCellindex]);
+
+                // OddNum : Head
+                int colBLFName2 = 11;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFName2].Value = GetBlueLocateFeaturesNameOddNum[row - startCellindex]; // Second feature name is string type 
+                int colBLFScore2 = 12;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFScore2].Value = double.Parse(GetBlueLocateFeaturesScoreOddNum[row - startCellindex]);
+                int colBLFPosX2 = 13;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFPosX2].Value = double.Parse(GetBlueLocateFeaturesPosXOddNum[row - startCellindex]);
+                int colBLFPosY2 = 14;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFPosY2].Value = double.Parse(GetBlueLocateFeaturesPosYOddNum[row - startCellindex]);
+                int colBLFAngle2 = 15;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFAngle2].Value = double.Parse(GetBlueLocateFeaturesAngleOddNum[row - startCellindex]);
+                int colBLFSizeH2 = 16;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFSizeH2].Value = int.Parse(GetBlueLocateFeaturesSizeHeightOddNum[row - startCellindex]);
+                int colBLFSizeW2 = 17;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueLocateTool.Cells[row, colBLFSizeW2].Value = int.Parse(GetBlueLocateFeaturesSizeWidthOddNum[row - startCellindex]);
+                //JK-AddResult-End - 2023.07.06
+
                 // Fill in max, min, average for analysing process time of blue locate. 
                 worksheetBlueLocateTool.Cells["B2"].Formula = $"MAX(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";
                 worksheetBlueLocateTool.Cells["B3"].Formula = $"MIN(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";
@@ -919,7 +2775,8 @@ namespace QAGPTPJT
                 chartBlueLocateTool.Title.Font.Size = 14;
                 chartBlueLocateTool.Title.Font.Bold = true;
                 chartBlueLocateTool.Title.Font.Italic = true;
-                chartBlueLocateTool.SetPosition(1, 1, 6, 6);
+                //chartBlueLocateTool.SetPosition(1, 1, 6, 6); // Graph position before 2023.07.06
+                chartBlueLocateTool.SetPosition(7, 7, 6, 6);
                 chartBlueLocateTool.SetSize(800, 600);
 
                 ExcelAddress valueAddress_Data1_BlueLocateTool = new ExcelAddress(startCellindex, 2, (Constants.RepeatProcess + (startCellindex - 1)), 2);
@@ -943,6 +2800,70 @@ namespace QAGPTPJT
                 int colBlueReadTool = 2;
                 for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
                     worksheetBlueReadTool.Cells[row, colBlueReadTool].Value = int.Parse(GetPTimesBlueRead[row - startCellindex]);
+
+                //JK-AddResult-Start - 2023.07.11
+                int colBRFeatures = 3;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFeatures].Value = int.Parse(GetBlueReadMatchCountFeatures[row - startCellindex]);
+
+                int colBRFName1 = 4;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName1].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 0)].Name;//.ToString();                                
+                int colBRFScore1 = 5;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore1].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 0)].Score;
+                int colBRFName2 = 6;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName2].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 1)].Name;//.ToString();
+                int colBRFScore2 = 7;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore2].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 1)].Score;
+                int colBRFName3 = 8;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName3].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 2)].Name;//.ToString();
+                int colBRFScore3 = 9;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore3].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 2)].Score;
+                int colBRFName4 = 10;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName4].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 3)].Name;//.ToString();
+                int colBRFScore4 = 11;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore4].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 3)].Score;
+
+                int colBRFName5 = 12;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName5].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 4)].Name;//.ToString();
+                int colBRFScore5 = 13;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore5].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 4)].Score;
+                int colBRFName6 = 14;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName6].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 5)].Name;//.ToString();
+                int colBRFScore6 = 15;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore6].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 5)].Score;
+                int colBRFName7 = 16;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName7].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 6)].Name;//.ToString();
+                int colBRFScore7 = 17;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore7].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 6)].Score;
+                int colBRFName8 = 18;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName8].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 7)].Name;//.ToString();
+                int colBRFScore8 = 19;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore8].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 7)].Score;
+                int colBRFName9 = 20;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFName9].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 8)].Name;//.ToString();
+                int colBRFScore9 = 21;
+                for (int row = startCellindex; row < (Constants.RepeatProcess + startCellindex); row++)
+                    worksheetBlueReadTool.Cells[row, colBRFScore9].Value = GetBlueReadMatchReault[(((row - startCellindex) * 9) + 8)].Score;
+
+                //  GetBlueReadMatchReault.ElementAt(1); // 결과들을 입력 하면서 배열화 된 것인가.?
+                //JK-AddResult-End - 2023.07.11
                 // Fill in max, min, average for analysing process time of blue locate. 
                 worksheetBlueReadTool.Cells["B2"].Formula = $"MAX(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";
                 worksheetBlueReadTool.Cells["B3"].Formula = $"MIN(B{startCellindex}:B{(Constants.RepeatProcess + startCellindex - 1)})";
@@ -953,7 +2874,8 @@ namespace QAGPTPJT
                 chartBlueReadTool.Title.Font.Size = 14; //chartBlueReadTool.Title.Font.Color = Color.FromArgb(0, 75, 163);
                 chartBlueReadTool.Title.Font.Bold = true;
                 chartBlueReadTool.Title.Font.Italic = true;
-                chartBlueReadTool.SetPosition(1, 1, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
+                //chartBlueReadTool.SetPosition(1, 1, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
+                chartBlueReadTool.SetPosition(7, 7, 6, 6); // Start point to dispale of Chart  ex) 0,0,5,5 : Draw a chart from F1 Cell vs 1,1,6,6 : Draw a chart from G2 Cell
                 chartBlueReadTool.SetSize(800, 600);
 
                 ExcelAddress valueAddress_Data1_BlueReadTool = new ExcelAddress(startCellindex, 2, (Constants.RepeatProcess + (startCellindex - 1)), 2);
@@ -974,4 +2896,7 @@ namespace QAGPTPJT
         }
     }
 }
-
+// Save info
+// H:\_2_CCCCC_modification_addingresult\QAGPT_No164_28557\QAGPT_Build_164_artifacts\target_directory\QAGPTPJT\QAGPTPJT
+// Program_TaskDay_20230717.cs
+// 오후 6:18 2023-07-17
