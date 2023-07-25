@@ -39,7 +39,7 @@ namespace QAGPTPJT
 {
     static class Constants
     {
-        public const int RepeatProcess = 5; // When initialised variabl, if It include 'const' in type string, This value never change.        
+        public const int RepeatProcess = 15000; // When initialised variabl, if It include 'const' in type string, This value never change.        
     }
 
     public static class TestConfigurationItems
