@@ -33,7 +33,7 @@ using Excel = Microsoft.Office.Interop.Excel;
 
 // Note : // JK-Modified-2023.07.21 - Start : Modified code to applied resized images(1024x1024x24)
 // Note : // JK-Modified-2023 07.24 - Start : Fill in cells in Excel fiel after checking the number of red regions. (in case of Red Focused Unsupervised) 
-
+// Note : checking for the preparation of demonstration - 2023.08.10
 
 namespace QAGPTPJT
 {
